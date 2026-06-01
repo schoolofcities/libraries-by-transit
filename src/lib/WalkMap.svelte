@@ -1,0 +1,202 @@
+<script>
+
+	import { onMount, createEventDispatcher } from "svelte";
+	import maplibregl from "maplibre-gl";
+	import "maplibre-gl/dist/maplibre-gl.css";
+	import mapStyle from "../assets/map-style.json";
+
+	const dispatch = createEventDispatcher();
+
+	export let map = null;
+
+	let mapContainer;
+
+	onMount(() => {
+
+		const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
+
+		map = new maplibregl.Map({
+			container: mapContainer,
+			style: mapStyle,
+			center: [-79.350000, 43.730000],
+			zoom: 9.8,
+			bearing: -17,
+			dragRotate: false,
+			touchPitch: false,
+			minZoom: 9,
+			maxZoom: 17,
+			projection: "mercator",
+			attributionControl: false,
+		});
+
+		map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+		map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 100 }), 'bottom-right');
+
+		map.on('load', () => {
+
+			map.addSource('isochrones-walk', {
+				type: 'geojson',
+				data: '/public-libraries/data/isochrones_walk.geojson'
+			});
+
+			map.addSource('libraries', {
+				type: 'geojson',
+				data: '/public-libraries/data/libraries.geojson'
+			});
+
+			map.addSource('transit-lines', {
+				type: 'geojson',
+				data: '/public-libraries/data/ttc_main_lines.geojson'
+			});
+
+			map.addLayer({
+				id: 'iso-walk-fill',
+				type: 'fill',
+				source: 'isochrones-walk',
+				paint: {
+					'fill-color': '#6D247A',
+					'fill-opacity': [
+						'match', ['get', 'time_bucket'],
+						'over_30',  0.9,
+						'15_to_30', 0.4,
+						'under_15', 0.2,
+						0.2
+					],
+					'fill-outline-color': 'transparent',
+				},
+			});
+
+			map.addLayer({
+				id: 'transit-line',
+				type: 'line',
+				source: 'transit-lines',
+				paint: {
+					'line-color': '#000000',
+					'line-opacity': 0.5,
+					'line-width': 1.5,
+				},
+			});
+
+			map.addLayer({
+				id: 'library-circles-walk',
+				type: 'circle',
+				source: 'libraries',
+				paint: {
+					'circle-color': '#015FC1',
+					'circle-radius': 4,
+					'circle-stroke-color': '#ffffff',
+					'circle-stroke-width': 1.5,
+				},
+			});
+
+			map.addSource('ttc-lines-walk', {
+    		type: 'geojson',
+    		data: '/public-libraries/data/ttc_main_lines.geojson'
+			});
+
+			map.on('mouseenter', 'library-circles-walk', (e) => {
+				map.getCanvas().style.cursor = 'pointer';
+				const coords = e.features[0].geometry.coordinates.slice();
+				const name = e.features[0].properties.BranchName ?? 'Library';
+				popup.setLngLat(coords).setHTML(`<b>${name}</b>`).addTo(map);
+			});
+
+			map.on('mouseleave', 'library-circles-walk', () => {
+				map.getCanvas().style.cursor = '';
+				popup.remove();
+			});
+
+			// Dispatch move events for sync
+			map.on('move', () => dispatch('move', map));
+
+		});
+
+	});
+
+</script>
+
+
+
+<div class="map-wrap">
+
+	<div class="map-title">Walking</div>
+
+	<div class="map" bind:this={mapContainer}></div>
+
+	<div class="legend">
+		<b>Minutes to Library</b>
+		<div class="legend-row"><div class="swatch" style="background:#6D247A; opacity:0.2;"></div> &lt;15 min</div>
+		<div class="legend-row"><div class="swatch" style="background:#6D247A; opacity:0.4;"></div> 15–30 min</div>
+		<div class="legend-row"><div class="swatch" style="background:#6D247A; opacity:0.9;"></div> 30+ min</div>
+		<div class="legend-row"><div class="swatch circle" style="background:#015FC1;"></div> Library</div>
+		<div class="legend-row"><div class="swatch line"></div> TTC rapid transit</div>
+	</div>
+
+</div>
+
+
+
+<style>
+
+	.map-wrap {
+		position: relative;
+		width: 100%;
+		height: 520px;
+	}
+
+	.map {
+		width: 100%;
+		height: 100%;
+	}
+
+	.map-title {
+		position: absolute;
+		top: 12px;
+		left: 12px;
+		z-index: 10;
+		background: white;
+		padding: 5px 12px;
+		border-radius: 6px;
+		font-family: Arial, sans-serif;
+		font-size: 13px;
+		font-weight: bold;
+		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+	}
+
+	.legend {
+		position: absolute;
+		bottom: 36px;
+		right: 12px;
+		z-index: 10;
+		background: white;
+		padding: 10px 12px;
+		border: 1px solid #ccc;
+		border-radius: 6px;
+		font-family: Arial, sans-serif;
+		font-size: 12px;
+		box-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+		pointer-events: none;
+	}
+
+	.legend-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin-top: 4px;
+	}
+
+	.swatch {
+		width: 12px;
+		height: 12px;
+		flex-shrink: 0;
+	}
+
+	.swatch.circle { border-radius: 50%; }
+	
+	.swatch.line {
+		height: 3px;
+		background: #000;
+		opacity: 0.5;
+	}
+
+</style>

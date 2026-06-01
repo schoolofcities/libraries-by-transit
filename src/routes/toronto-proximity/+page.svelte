@@ -1,67 +1,55 @@
 <script>
 
 	import '../../assets/global-styles.css';
+	import TransitMap from '../../lib/TransitMap.svelte';
+	import WalkMap from '../../lib/WalkMap.svelte';
 
-	import { onMount } from "svelte";
+	let transitMap;
+	let walkMap;
 
-	import maplibregl from "maplibre-gl";
-	import "maplibre-gl/dist/maplibre-gl.css";
+	let syncing = false;
 
-	import mapStyle from "../../assets/map-style.json";
-
-	let map;
-
-	onMount(async () => {
-
-		map = new maplibregl.Map({
-			container: "map",
-			style: mapStyle,
-			center: [-79.386783, 43.670203],
-			zoom: 13,
-			bearing: 0,
-			pitch: 0,
-			scrollZoom: true,
-			dragRotate: false,
-			touchPitch: false,
-			dragPan: true,
-			touchZoomRotate: true,
-			boxZoom: true,
-			keyboard: true,
-			doubleClickZoom: true,
-			minZoom: 10,
-			maxZoom: 17,
-			projection: "mercator",
-			attributionControl: false,
+	function syncMaps(source, target) {
+		if (!target || syncing) return;
+		syncing = true;
+		target.jumpTo({
+			center: source.getCenter(),
+			zoom:   source.getZoom(),
+			bearing: source.getBearing(),
+			pitch:  source.getPitch()
 		});
+		syncing = false;
+	}
 
-		map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-		map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 120 }), 'bottom-right');
-
-	});
+	function onTransitMove(e) { syncMaps(e.detail, walkMap); }
+	function onWalkMove(e)    { syncMaps(e.detail, transitMap); }
 
 </script>
 
 
 
-<svelte:head>
-
-	<title>Toronto libraries proximity | School of Cities</title>
-
-	<meta
-		name="viewport"
-		content="width=device-width, initial-scale=1, minimum-scale=1"
-	/>
-
-	<meta name="description" content="">
-	<meta name="author" content="Jeff Allen">
-
-</svelte:head>
-
-
-
 <main>
 
-	<div id="map"></div>
+	<div class="text">
+		<div class="title">
+			<h1>Proximity to Toronto Public Libraries</h1>
+			<p><a href="https://jamaps.github.io/about.html">Jeff Allen</a> /// May 2026</p>
+		</div>
+		<p>
+			<!-- intro text -->
+		</p>
+	</div>
+
+	<div class="map-grid">
+		<TransitMap bind:map={transitMap} on:move={onTransitMove}/>
+		<WalkMap    bind:map={walkMap}    on:move={onWalkMove}/>
+	</div>
+
+	<div class="text">
+		<p>
+			<!-- analysis text -->
+		</p>
+	</div>
 
 </main>
 
@@ -69,10 +57,17 @@
 
 <style>
 
-	#map {
-		height: 100dvh;
-		width: 100dvw;
-		z-index: 0;
+	.map-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+		max-width: 1400px;
+		margin: 0 auto;
+		padding: 0 12px;
+	}
+
+	@media (max-width: 800px) {
+		.map-grid { grid-template-columns: 1fr; }
 	}
 
 </style>
