@@ -3,13 +3,13 @@
 	import { onMount, createEventDispatcher } from "svelte";
 	import maplibregl from "maplibre-gl";
 	import "maplibre-gl/dist/maplibre-gl.css";
-	import mapStyle from "../assets/map-style.json";
 
 	const dispatch = createEventDispatcher();
 
 	export let map = null;
 
 	let mapContainer;
+	let showLegend = false;
 
 	let timeOfWeek = 'weekday';
 
@@ -31,16 +31,26 @@
 		map.getSource('isochrones-transit').setData(dataFiles[val]);
 	}
 
-	onMount(() => {
+	async function getStyle() {
+		const res = await fetch('https://tiles.stadiamaps.com/styles/alidade_smooth.json');
+		const style = await res.json();
+		style.layers = style.layers.filter(l => l.type !== 'symbol');
+		return style;
+	}
+
+	onMount(async () => {
+
+		const style = await getStyle();
+
+		showLegend = window.innerWidth >= 1025;
 
 		const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
 
 		map = new maplibregl.Map({
 			container: mapContainer,
-			style: mapStyle,
-			center: [-79.350000, 43.730000],
-			zoom: 9.8,
-			bearing: -17,
+			style: style,
+			center: [-79.386783, 43.670203],
+			zoom: 9,
 			dragRotate: false,
 			touchPitch: false,
 			minZoom: 9,
@@ -53,6 +63,13 @@
 		map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 100 }), 'bottom-right');
 
 		map.on('load', () => {
+			
+			const bounds = window.innerWidth > 1024
+				? [[-79.56, 43.60], [-79.13, 43.84]]
+				: [[-79.62, 43.582], [-79.085, 43.858]];
+
+			map.fitBounds(bounds, { padding: window.innerWidth > 1024 ? 0 : 24, bearing: -17, duration: 0 });
+
 
 			map.addSource('isochrones-transit', {
 				type: 'geojson',
@@ -74,14 +91,14 @@
 				type: 'fill',
 				source: 'isochrones-transit',
 				paint: {
-					'fill-color': '#6D247A',
-					'fill-opacity': [
+					'fill-color': [
 						'match', ['get', 'time_bucket'],
-						'over_30',  0.9,
-						'15_to_30', 0.4,
-						'under_15', 0.2,
-						0.2
+						'under_15', '#C4A7C9',
+						'15_to_30', '#9865A1',
+						'over_30',  '#6D247A',
+						'#6D247A'
 					],
+					'fill-opacity': 0.85,
 					'fill-outline-color': 'transparent',
 				},
 			});
@@ -93,7 +110,7 @@
 				paint: {
 					'line-color': '#000000',
 					'line-opacity': 0.5,
-					'line-width': 1.5,
+					'line-width': 2.5,
 				},
 			});
 
@@ -121,7 +138,6 @@
 				popup.remove();
 			});
 
-			// Dispatch move events for sync
 			map.on('move', () => dispatch('move', map));
 
 		});
@@ -147,15 +163,37 @@
 
 	<div class="map" bind:this={mapContainer}></div>
 
+	{#if showLegend}
 	<div class="legend">
-		<b>Minutes to Library</b>
+		<div class="legend-name">Minutes to Library</div>
 		<div class="legend-subtitle">{timeLabel}</div>
-		<div class="legend-row"><div class="swatch" style="background:#6D247A; opacity:0.2;"></div> &lt;15 min</div>
-		<div class="legend-row"><div class="swatch" style="background:#6D247A; opacity:0.4;"></div> 15–30 min</div>
-		<div class="legend-row"><div class="swatch" style="background:#6D247A; opacity:0.9;"></div> 30+ min</div>
-		<div class="legend-row"><div class="swatch circle" style="background:#015FC1;"></div> Library</div>
-		<div class="legend-row"><div class="swatch line"></div> TTC rapid transit</div>
+		<div class="color-bar">
+			<div class="color-segment" style="background:#C4A7C9;"></div>
+			<div class="color-segment" style="background:#9865A1;"></div>
+			<div class="color-segment" style="background:#6D247A;"></div>
+		</div>
+		<div class="break-labels">
+			<span></span>
+			<span>15 min</span>
+			<span>30 min</span>
+			<span></span>
+		</div>
+		<div class="legend-extras">
+			<div class="legend-item">
+				<div class="swatch circle" style="background:#015FC1;"></div>
+				<span>Library</span>
+			</div>
+			<div class="legend-item">
+				<div class="swatch line"></div>
+				<span>Major Transit Lines</span>
+			</div>
+		</div>
 	</div>
+	{/if}
+
+	<button class="legend-toggle" on:click={() => showLegend = !showLegend}>
+		{showLegend ? 'Hide legend' : 'Show legend'}
+	</button>
 
 </div>
 
@@ -182,15 +220,14 @@
 		background: white;
 		padding: 5px 12px;
 		border-radius: 6px;
-		font-family: Arial, sans-serif;
+		font-family: 'TradeGothicBold', Arial, sans-serif;
 		font-size: 13px;
-		font-weight: bold;
 		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 	}
 
 	.toggle {
 		position: absolute;
-		top: 12px;
+		top: 10px;
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 10;
@@ -203,11 +240,11 @@
 	}
 
 	.toggle button {
-		padding: 5px 14px;
+		padding: 4px 10px;
 		border: none;
 		border-radius: 5px;
 		background: transparent;
-		font-family: Arial, sans-serif;
+		font-family: 'OpenSans', Arial, sans-serif;
 		font-size: 13px;
 		cursor: pointer;
 		color: #333;
@@ -219,14 +256,14 @@
 
 	.legend {
 		position: absolute;
-		bottom: 36px;
+		bottom: 70px;
 		right: 12px;
 		z-index: 10;
 		background: white;
 		padding: 10px 12px;
 		border: 1px solid #ccc;
 		border-radius: 6px;
-		font-family: Arial, sans-serif;
+		font-family: 'OpenSans', Arial, sans-serif;
 		font-size: 12px;
 		box-shadow: 1px 1px 3px rgba(0,0,0,0.15);
 		pointer-events: none;
@@ -235,6 +272,7 @@
 	.legend-subtitle {
 		color: #666;
 		font-size: 10px;
+		font-family: 'OpenSans', Arial, sans-serif;
 		margin: 2px 0 6px;
 	}
 
@@ -258,5 +296,87 @@
 		background: #000;
 		opacity: 0.5;
 	}
+
+	/* Desktop — always show legend, hide toggle button */
+	.legend-toggle { display: none; }
+
+	@media (min-width: 1025px) {
+		.legend {
+			bottom: 36px;
+			display: block !important;
+		}
+	}
+
+	/* Tablet and below — show toggle button, legend controlled by state */
+	@media (max-width: 1024px) {
+		.map-wrap { height: 400px; }
+
+		.toggle {
+			top: 38px;
+			left: 12px;
+			transform: none;
+		}
+
+		.legend-toggle {
+			display: block;
+			position: absolute;
+			bottom: 36px;
+			right: 12px;
+			z-index: 11;
+			background: white;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			padding: 5px 12px;
+			font-family: 'OpenSans', Arial, sans-serif;
+			font-size: 11px;
+			cursor: pointer;
+			box-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+		}
+	}
+
+	@media (max-width: 600px) {
+		.map-wrap { height: 320px; }
+		.map-title { font-size: 11px; padding: 4px 8px; }
+		.toggle button { font-size: 11px; padding: 3px 8px; }
+	}
+
+	.legend-name {
+    font-family: 'TradeGothicBold', Arial, sans-serif;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.color-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 2px;
+    overflow: hidden;
+    width: 160px;
+}
+
+.color-segment { flex: 1; }
+
+.break-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 160px;
+    font-size: 9px;
+    color: #444;
+    margin-top: 2px;
+    margin-bottom: 6px;
+}
+
+.legend-extras {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+}
 
 </style>
