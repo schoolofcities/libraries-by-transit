@@ -1,17 +1,9 @@
 <script>
 
 	import ChoroplethMap from './ChoroplethMap.svelte';
+	import { ALL_VARIABLE_IDS } from './demographics.js';
 
 	let open = false;
-
-	const variables = [
-		'visible_minority_pct',
-		'low_income_pct',
-		'recent_immigrants_pct',
-		'first_gen_immigrants_pct',
-		'seniors_pct',
-		'children_pct',
-	];
 
 </script>
 
@@ -25,7 +17,7 @@
 
 	{#if open}
 		<div class="map-grid">
-			{#each variables as v}
+			{#each ALL_VARIABLE_IDS as v}
 				<div class="map-cell">
 					<ChoroplethMap variable={v}/>
 				</div>
@@ -41,25 +33,24 @@
 
 	.accordion {
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1120px;
 		margin: 0 auto;
-		padding: 0 12px;
+		padding: 0 6px;
 		box-sizing: border-box;
 	}
 
 	.accordion-btn {
 		width: 100%;
-		padding: 12px 16px;
+		padding: 8px 12px;
 		background: #f5f5f5;
 		border: 1px solid #ddd;
 		border-radius: 6px;
-		font-family: Arial, sans-serif;
+		font-family: 'OpenSans', sans-serif;
 		font-size: 14px;
 		font-weight: bold;
 		color: #1E3765;
 		cursor: pointer;
 		text-align: left;
-		transition: background 0.15s;
 		box-sizing: border-box;
 	}
 
