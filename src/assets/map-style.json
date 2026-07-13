@@ -4,44 +4,117 @@
   "sources": {
     "osm": {
       "type": "vector",
-      "tiles": ["https://vector.openstreetmap.org/shortbread_v1/{z}/{x}/{y}.mvt"]
+      "tiles": [
+        "https://vector.openstreetmap.org/shortbread_v1/{z}/{x}/{y}.mvt"
+      ]
     }
   },
   "layers": [
-    { "id": "background", "type": "background", "paint": { "background-color": "#ffffff" } },
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#ffffff"
+      }
+    },
     {
       "id": "land_green",
       "type": "fill",
       "source": "osm",
       "source-layer": "land",
-      "filter": ["match", ["get", "kind"], [
-        "forest", "grass", "meadow", "orchard", "vineyard", "allotments",
-        "cemetery", "grave_yard", "village_green", 
-        "greenhouse_horticulture", "plant_nursery", "heath", "scrub",
-        "grassland", "swamp", "bog", "string_bog", "wet_meadow", "marsh",
-        "golf_course", "park", "garden", "playground", "miniature_golf"
-      ], true, false],
-      "paint": { "fill-color": "#e2f0d4", "fill-opacity": 1 }
+      "filter": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "forest",
+          "grass",
+          "meadow",
+          "orchard",
+          "vineyard",
+          "allotments",
+          "cemetery",
+          "grave_yard",
+          "village_green",
+          "greenhouse_horticulture",
+          "plant_nursery",
+          "heath",
+          "scrub",
+          "grassland",
+          "swamp",
+          "bog",
+          "string_bog",
+          "wet_meadow",
+          "marsh",
+          "golf_course",
+          "park",
+          "garden",
+          "playground",
+          "miniature_golf"
+        ],
+        true,
+        false
+      ],
+      "paint": {
+        "fill-color": "#e2f0d4",
+        "fill-opacity": 1
+      }
     },
     {
       "id": "land_other",
       "type": "fill",
       "source": "osm",
       "source-layer": "land",
-      "filter": ["match", ["get", "kind"], [
-        "industrial", "commercial", "retail", "railway", "landfill", "quarry",
-        "brownfield", "greenfield", "farmyard", "garages",
-        "sand", "beach", "bare_rock", "scree", "shingle"
-      ], true, false],
-      "paint": { "fill-color": "#e8d4eb", "fill-opacity": 0.1 }
+      "filter": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "industrial",
+          "commercial",
+          "retail",
+          "railway",
+          "landfill",
+          "quarry",
+          "brownfield",
+          "greenfield",
+          "farmyard",
+          "garages",
+          "sand",
+          "beach",
+          "bare_rock",
+          "scree",
+          "shingle"
+        ],
+        true,
+        false
+      ],
+      "paint": {
+        "fill-color": "#e8d4eb",
+        "fill-opacity": 0.1
+      }
     },
     {
       "id": "land_residential",
       "type": "fill",
       "source": "osm",
       "source-layer": "land",
-      "filter": ["==", ["get", "kind"], "residential"],
-      "paint": { "fill-color": "#faf3c0", "fill-opacity": 0.05 }
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "residential"
+      ],
+      "paint": {
+        "fill-color": "#faf3c0",
+        "fill-opacity": 0.05
+      }
     },
     {
       "id": "land_institutional",
@@ -49,29 +122,267 @@
       "source": "osm",
       "source-layer": "sites",
       "minzoom": 14,
-      "filter": ["match", ["get", "kind"], ["danger_area", "sports_centre", "university", "college", "school", "hospital", "prison"], true, false],
-      "paint": { "fill-color": "#f2e4ec", "fill-opacity": 0.1 }
+      "filter": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "danger_area",
+          "sports_centre",
+          "university",
+          "college",
+          "school",
+          "hospital",
+          "prison"
+        ],
+        true,
+        false
+      ],
+      "paint": {
+        "fill-color": "#f2e4ec",
+        "fill-opacity": 0.1
+      }
     },
-    { "id": "water_lines", "type": "line", "source": "osm", "source-layer": "water_lines", "filter": ["==", "tunnel", false], "paint": { "line-color": "#B8DDEF", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 14, 4] } },
-    { "id": "ocean", "type": "fill", "source": "osm", "source-layer": "ocean", "paint": { "fill-color": "#E3F4FB" } },
-    { "id": "water_polygons", "type": "fill", "source": "osm", "source-layer": "water_polygons", "paint": { "fill-color": "#E3F4FB" } },
-    { "id": "ocean_outline", "type": "line", "source": "osm", "source-layer": "ocean", "paint": { "line-color": "#B8DDEF", "line-width": 1 } },
-    { "id": "water_polygons_outline", "type": "line", "source": "osm", "source-layer": "water_polygons", "paint": { "line-color": "#B8DDEF", "line-width": 1 } },
-    { "id": "cycleways", "type": "line", "source": "osm", "source-layer": "streets", "minzoom": 14, "filter": ["match", ["get", "kind"], ["cycleway", "path", "footway"], true, false], "layout": { "line-cap": "round", "line-join": "round" }, "paint": { "line-color": "#d1d1d1", "line-width": 1 } },
+    {
+      "id": "water_lines",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "water_lines",
+      "filter": [
+        "==",
+        "tunnel",
+        false
+      ],
+      "paint": {
+        "line-color": "#B8DDEF",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          1,
+          14,
+          4
+        ]
+      }
+    },
+    {
+      "id": "ocean",
+      "type": "fill",
+      "source": "osm",
+      "source-layer": "ocean",
+      "paint": {
+        "fill-color": "#E3F4FB"
+      }
+    },
+    {
+      "id": "water_polygons",
+      "type": "fill",
+      "source": "osm",
+      "source-layer": "water_polygons",
+      "paint": {
+        "fill-color": "#E3F4FB"
+      }
+    },
+    {
+      "id": "ocean_outline",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "ocean",
+      "paint": {
+        "line-color": "#B8DDEF",
+        "line-width": 1
+      }
+    },
+    {
+      "id": "water_polygons_outline",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "water_polygons",
+      "paint": {
+        "line-color": "#B8DDEF",
+        "line-width": 1
+      }
+    },
+    {
+      "id": "cycleways",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "streets",
+      "minzoom": 14,
+      "filter": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "cycleway",
+          "path",
+          "footway"
+        ],
+        true,
+        false
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#d1d1d1",
+        "line-width": 1
+      }
+    },
     {
       "id": "streets_tunnels_casing",
       "type": "line",
       "source": "osm",
       "source-layer": "streets",
-      "filter": ["all", ["==", ["get", "tunnel"], true], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "busway", "bus_guideway", "living_street"]]]],
-      "layout": { "line-cap": "butt", "line-join": "round" },
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "tunnel"
+          ],
+          true
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "unclassified",
+              "residential",
+              "busway",
+              "bus_guideway",
+              "living_street"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#d1d1d1",
-        "line-dasharray": [2, 2],
-        "line-width": ["interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "kind"], ["motorway", "trunk"], 2, ["primary"], 3, 1],
-          14, ["match", ["get", "kind"], ["motorway", "trunk"], 7, ["primary"], 5.5, ["secondary"], 4.5, ["tertiary"], 3.5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 2.5, 1.5],
-          15, ["match", ["get", "kind"], ["motorway", "trunk"], 14, ["primary"], 11, ["secondary"], 9, ["tertiary"], 7, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 5, 3]
+        "line-dasharray": [
+          2,
+          2
+        ],
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            2,
+            [
+              "primary"
+            ],
+            3,
+            1
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            7,
+            [
+              "primary"
+            ],
+            5.5,
+            [
+              "secondary"
+            ],
+            4.5,
+            [
+              "tertiary"
+            ],
+            3.5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            2.5,
+            1.5
+          ],
+          15,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            14,
+            [
+              "primary"
+            ],
+            11,
+            [
+              "secondary"
+            ],
+            9,
+            [
+              "tertiary"
+            ],
+            7,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            5,
+            3
+          ]
         ]
       }
     },
@@ -80,14 +391,140 @@
       "type": "line",
       "source": "osm",
       "source-layer": "streets",
-      "filter": ["all", ["==", ["get", "tunnel"], true], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "busway", "bus_guideway", "living_street"]]]],
-      "layout": { "line-cap": "butt", "line-join": "round" },
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "tunnel"
+          ],
+          true
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "unclassified",
+              "residential",
+              "busway",
+              "bus_guideway",
+              "living_street"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#ececec",
-        "line-width": ["interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "kind"], ["motorway", "trunk"], 1, ["primary"], 1.5, 0.5],
-          14, ["match", ["get", "kind"], ["motorway", "trunk"], 5, ["primary"], 4, ["secondary"], 3, ["tertiary"], 2.5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 1.5, 0.75],
-          15, ["match", ["get", "kind"], ["motorway", "trunk"], 10, ["primary"], 8, ["secondary"], 6, ["tertiary"], 5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 3, 1.5]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            1,
+            [
+              "primary"
+            ],
+            1.5,
+            0.5
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            5,
+            [
+              "primary"
+            ],
+            4,
+            [
+              "secondary"
+            ],
+            3,
+            [
+              "tertiary"
+            ],
+            2.5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            1.5,
+            0.75
+          ],
+          15,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            10,
+            [
+              "primary"
+            ],
+            8,
+            [
+              "secondary"
+            ],
+            6,
+            [
+              "tertiary"
+            ],
+            5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            3,
+            1.5
+          ]
         ]
       }
     },
@@ -96,15 +533,182 @@
       "type": "line",
       "source": "osm",
       "source-layer": "streets",
-      "filter": ["all", ["!=", ["get", "tunnel"], true], ["!=", ["get", "bridge"], true], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "busway", "bus_guideway", "living_street"]]]],
-      "layout": { "line-cap": "round", "line-join": "round" },
+      "filter": [
+        "all",
+        [
+          "!=",
+          [
+            "get",
+            "tunnel"
+          ],
+          true
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "bridge"
+          ],
+          true
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "unclassified",
+              "residential",
+              "busway",
+              "bus_guideway",
+              "living_street"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#d1d1d1",
-        "line-width": ["interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "kind"], ["motorway", "trunk"], 2, ["primary"], 3, 1],
-          12, ["match", ["get", "kind"], ["motorway", "trunk"], 2, ["primary"], 3, ["secondary"], 2.75, ["tertiary"], 2.25, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 1, 1],
-          14, ["match", ["get", "kind"], ["motorway", "trunk"], 7, ["primary"], 5.5, ["secondary"], 4.5, ["tertiary"], 3.5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 2.5, 1.5],
-          15, ["match", ["get", "kind"], ["motorway", "trunk"], 14, ["primary"], 11, ["secondary"], 9, ["tertiary"], 7, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 5, 3]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            2,
+            [
+              "primary"
+            ],
+            3,
+            1
+          ],
+          12,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            2,
+            [
+              "primary"
+            ],
+            3,
+            [
+              "secondary"
+            ],
+            2.75,
+            [
+              "tertiary"
+            ],
+            2.25,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            1,
+            1
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            7,
+            [
+              "primary"
+            ],
+            5.5,
+            [
+              "secondary"
+            ],
+            4.5,
+            [
+              "tertiary"
+            ],
+            3.5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            2.5,
+            1.5
+          ],
+          15,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            14,
+            [
+              "primary"
+            ],
+            11,
+            [
+              "secondary"
+            ],
+            9,
+            [
+              "tertiary"
+            ],
+            7,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            5,
+            3
+          ]
         ]
       }
     },
@@ -113,15 +717,182 @@
       "type": "line",
       "source": "osm",
       "source-layer": "streets",
-      "filter": ["all", ["!=", ["get", "tunnel"], true], ["!=", ["get", "bridge"], true], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "busway", "bus_guideway", "living_street"]]]],
-      "layout": { "line-cap": "round", "line-join": "round" },
+      "filter": [
+        "all",
+        [
+          "!=",
+          [
+            "get",
+            "tunnel"
+          ],
+          true
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "bridge"
+          ],
+          true
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "unclassified",
+              "residential",
+              "busway",
+              "bus_guideway",
+              "living_street"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#e8e8e8",
-        "line-width": ["interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "kind"], ["motorway", "trunk"], 1, ["primary"], 1.5, 0.5],
-          12, ["match", ["get", "kind"], ["motorway", "trunk"], 1, ["primary"], 1.5, ["secondary"], 1.75, ["tertiary"], 1.25, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 0.5, 0.5],
-          14, ["match", ["get", "kind"], ["motorway", "trunk"], 5, ["primary"], 4, ["secondary"], 3, ["tertiary"], 2.5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 1.5, 0.75],
-          15, ["match", ["get", "kind"], ["motorway", "trunk"], 10, ["primary"], 8, ["secondary"], 6, ["tertiary"], 5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 3, 1.5]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            1,
+            [
+              "primary"
+            ],
+            1.5,
+            0.5
+          ],
+          12,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            1,
+            [
+              "primary"
+            ],
+            1.5,
+            [
+              "secondary"
+            ],
+            1.75,
+            [
+              "tertiary"
+            ],
+            1.25,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            0.5,
+            0.5
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            5,
+            [
+              "primary"
+            ],
+            4,
+            [
+              "secondary"
+            ],
+            3,
+            [
+              "tertiary"
+            ],
+            2.5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            1.5,
+            0.75
+          ],
+          15,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            10,
+            [
+              "primary"
+            ],
+            8,
+            [
+              "secondary"
+            ],
+            6,
+            [
+              "tertiary"
+            ],
+            5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            3,
+            1.5
+          ]
         ]
       }
     },
@@ -130,14 +901,140 @@
       "type": "line",
       "source": "osm",
       "source-layer": "streets",
-      "filter": ["all", ["==", ["get", "bridge"], true], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "busway", "bus_guideway", "living_street"]]]],
-      "layout": { "line-cap": "butt", "line-join": "round" },
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "bridge"
+          ],
+          true
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "unclassified",
+              "residential",
+              "busway",
+              "bus_guideway",
+              "living_street"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#b2b2b2",
-        "line-width": ["interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "kind"], ["motorway", "trunk"], 2, ["primary"], 3, 1],
-          14, ["match", ["get", "kind"], ["motorway", "trunk"], 7, ["primary"], 5.5, ["secondary"], 4.5, ["tertiary"], 3.5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 2.5, 1.5],
-          15, ["match", ["get", "kind"], ["motorway", "trunk"], 14, ["primary"], 11, ["secondary"], 9, ["tertiary"], 7, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 5, 3]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            2,
+            [
+              "primary"
+            ],
+            3,
+            1
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            7,
+            [
+              "primary"
+            ],
+            5.5,
+            [
+              "secondary"
+            ],
+            4.5,
+            [
+              "tertiary"
+            ],
+            3.5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            2.5,
+            1.5
+          ],
+          15,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            14,
+            [
+              "primary"
+            ],
+            11,
+            [
+              "secondary"
+            ],
+            9,
+            [
+              "tertiary"
+            ],
+            7,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            5,
+            3
+          ]
         ]
       }
     },
@@ -146,14 +1043,140 @@
       "type": "line",
       "source": "osm",
       "source-layer": "streets",
-      "filter": ["all", ["==", ["get", "bridge"], true], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "busway", "bus_guideway", "living_street"]]]],
-      "layout": { "line-cap": "butt", "line-join": "round" },
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "bridge"
+          ],
+          true
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "unclassified",
+              "residential",
+              "busway",
+              "bus_guideway",
+              "living_street"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#e8e8e8",
-        "line-width": ["interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "kind"], ["motorway", "trunk"], 1, ["primary"], 1.5, 0.5],
-          14, ["match", ["get", "kind"], ["motorway", "trunk"], 5, ["primary"], 4, ["secondary"], 3, ["tertiary"], 2.5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 1.5, 0.75],
-          15, ["match", ["get", "kind"], ["motorway", "trunk"], 10, ["primary"], 8, ["secondary"], 6, ["tertiary"], 5, ["unclassified", "residential", "living_street", "busway", "bus_guideway"], 3, 1.5]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            1,
+            [
+              "primary"
+            ],
+            1.5,
+            0.5
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            5,
+            [
+              "primary"
+            ],
+            4,
+            [
+              "secondary"
+            ],
+            3,
+            [
+              "tertiary"
+            ],
+            2.5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            1.5,
+            0.75
+          ],
+          15,
+          [
+            "match",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            10,
+            [
+              "primary"
+            ],
+            8,
+            [
+              "secondary"
+            ],
+            6,
+            [
+              "tertiary"
+            ],
+            5,
+            [
+              "unclassified",
+              "residential",
+              "living_street",
+              "busway",
+              "bus_guideway"
+            ],
+            3,
+            1.5
+          ]
         ]
       }
     },
@@ -163,27 +1186,133 @@
       "source": "osm",
       "source-layer": "streets",
       "minzoom": 8,
-      "filter": ["==", ["get", "kind"], "rail"],
-      "layout": { "line-cap": "butt", "line-join": "round" },
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "rail"
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round",
+        "visibility": "none"
+      },
       "paint": {
         "line-color": "#bbbbbb",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 14, 1],
-        "line-dasharray": [6, 3]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.5,
+          14,
+          1
+        ],
+        "line-dasharray": [
+          6,
+          3
+        ]
       }
     },
-    { "id": "streetcar", "type": "line", "source": "osm", "source-layer": "streets", "minzoom": 14, "filter": ["==", ["get", "kind"], "tram"], "layout": { "line-cap": "round", "line-join": "round" }, "paint": { "line-color": "#cc2200", "line-width": 0.5, "line-opacity": 0.5 } },
-    { "id": "buildings", "type": "fill", "source": "osm", "source-layer": "buildings", "minzoom": 14, "paint": { "fill-color": "#f5f5f5" } },
-    { "id": "buildings_outline", "type": "line", "source": "osm", "source-layer": "buildings", "minzoom": 14, "paint": { "line-color": "#d8d8d8", "line-width": 0.5 } },
+    {
+      "id": "streetcar",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "streets",
+      "minzoom": 14,
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "tram"
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round",
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#cc2200",
+        "line-width": 0.5,
+        "line-opacity": 0.5
+      }
+    },
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "osm",
+      "source-layer": "buildings",
+      "minzoom": 14,
+      "paint": {
+        "fill-color": "#f5f5f5"
+      },
+      "layout": {
+        "visibility": "none"
+      }
+    },
+    {
+      "id": "buildings_outline",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "buildings",
+      "minzoom": 14,
+      "paint": {
+        "line-color": "#d8d8d8",
+        "line-width": 0.5
+      },
+      "layout": {
+        "visibility": "none"
+      }
+    },
     {
       "id": "water_polygons_labels_large",
       "type": "symbol",
       "source": "osm",
       "source-layer": "water_polygons_labels",
-      "filter": [">=", ["get", "way_area"], 1350000],
+      "filter": [
+        ">=",
+        [
+          "get",
+          "way_area"
+        ],
+        1350000
+      ],
       "layout": {
-        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
-        "text-font": ["Open Sans Italic"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 16, 14],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Open Sans Italic"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          11,
+          16,
+          14
+        ],
         "text-max-width": 8
       },
       "paint": {
@@ -198,12 +1327,44 @@
       "source": "osm",
       "source-layer": "water_polygons_labels",
       "minzoom": 14,
-      "filter": ["<", ["get", "way_area"], 1350000],
+      "filter": [
+        "<",
+        [
+          "get",
+          "way_area"
+        ],
+        1350000
+      ],
       "layout": {
-        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
-        "text-font": ["Open Sans Italic"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 14, 11, 16, 14],
-        "text-max-width": 8
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Open Sans Italic"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          14,
+          11,
+          16,
+          14
+        ],
+        "text-max-width": 8,
+        "visibility": "none"
       },
       "paint": {
         "text-color": "#5BA4C7",
@@ -218,11 +1379,36 @@
       "source-layer": "water_lines_labels",
       "minzoom": 12,
       "layout": {
-        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
-        "text-font": ["Open Sans Italic"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 13],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Open Sans Italic"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          10,
+          16,
+          13
+        ],
         "symbol-placement": "line",
-        "text-max-angle": 30
+        "text-max-angle": 30,
+        "visibility": "none"
       },
       "paint": {
         "text-color": "#5BA4C7",
@@ -236,20 +1422,86 @@
       "source": "osm",
       "source-layer": "street_labels",
       "minzoom": 10.5,
-      "filter": ["match", ["get", "kind"], ["motorway", "trunk", "primary", "secondary"], true, false],
+      "filter": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "motorway",
+          "trunk",
+          "primary",
+          "secondary"
+        ],
+        true,
+        false
+      ],
       "layout": {
-        "text-field": ["let", "n", ["coalesce", ["get", "name_en"], ["get", "name"]],
-          ["case",
-            ["==", ["var", "n"], "Highway 401 Express"], "Highway 401",
-            ["==", ["var", "n"], "Highway 401 Collector"], "Highway 401",
-            ["var", "n"]
+        "text-field": [
+          "let",
+          "n",
+          [
+            "coalesce",
+            [
+              "get",
+              "name_en"
+            ],
+            [
+              "get",
+              "name"
+            ]
+          ],
+          [
+            "case",
+            [
+              "==",
+              [
+                "var",
+                "n"
+              ],
+              "Highway 401 Express"
+            ],
+            "Highway 401",
+            [
+              "==",
+              [
+                "var",
+                "n"
+              ],
+              "Highway 401 Collector"
+            ],
+            "Highway 401",
+            [
+              "var",
+              "n"
+            ]
           ]
         ],
-        "text-font": ["Open Sans Regular"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 9, 9, 13.5, 10, 14, 11, 16, 14],
+        "text-font": [
+          "Open Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          9,
+          13.5,
+          10,
+          14,
+          11,
+          16,
+          14
+        ],
         "symbol-placement": "line",
         "text-max-angle": 30,
-        "text-padding": 10
+        "text-padding": 10,
+        "visibility": "none"
       },
       "paint": {
         "text-color": "#666666",
@@ -263,14 +1515,50 @@
       "source": "osm",
       "source-layer": "street_labels",
       "minzoom": 13,
-      "filter": ["==", ["get", "kind"], "tertiary"],
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "tertiary"
+      ],
       "layout": {
-        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
-        "text-font": ["Open Sans Regular"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 13.5, 10, 14, 11, 16, 13],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Open Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          10,
+          13.5,
+          10,
+          14,
+          11,
+          16,
+          13
+        ],
         "symbol-placement": "line",
         "text-max-angle": 30,
-        "text-padding": 10
+        "text-padding": 10,
+        "visibility": "none"
       },
       "paint": {
         "text-color": "#666666",
@@ -284,14 +1572,55 @@
       "source": "osm",
       "source-layer": "street_labels",
       "minzoom": 14,
-      "filter": ["in", ["get", "kind"], ["literal", ["residential", "unclassified", "living_street"]]],
+      "filter": [
+        "in",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "literal",
+          [
+            "residential",
+            "unclassified",
+            "living_street"
+          ]
+        ]
+      ],
       "layout": {
-        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
-        "text-font": ["Open Sans Regular"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 14, 10, 15, 11, 17, 13],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Open Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          14,
+          10,
+          15,
+          11,
+          17,
+          13
+        ],
         "symbol-placement": "line",
         "text-max-angle": 30,
-        "text-padding": 10
+        "text-padding": 10,
+        "visibility": "none"
       },
       "paint": {
         "text-color": "#777777",
