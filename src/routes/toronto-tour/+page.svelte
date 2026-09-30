@@ -15,29 +15,66 @@
 	// Where along the panel's height a step becomes active (0 = top).
 	const TRIGGER = 0.4;
 
+	// Phones get a stepper instead of scrolling: Back/Next (or a swipe on the
+	// card) moves one step, and the dot plays that step out over a time that
+	// grows with its length, resting at the step's end. The map eases its
+	// camera in from the previous step at the start of each step (easeIn), so
+	// a finished step stays framed on itself.
+	const MOBILE_QUERY = '(max-width: 700px)';
+	const REST = 0.999;
+
 	let tours = $state([]);
 	let tourId = $state(null);
 	let progress = $state(0); // step index + fraction through that step
 	let hoveredTour = $state(null);
 	let panel;
 	let mapWrap;
+	let isMobile = $state(false);
+	let current = $state(0); // stepper: the step whose card is showing
 
 	const tour = $derived(tours.find((t) => t.id === tourId) ?? null);
 	const byId = $derived(tour ? segmentsById(tour) : {});
 	const steps = $derived(
-		tour ? [{ kind: 'intro', segs: [], bbox: tour.bbox }, ...tour.steps] : []
+		tour ? mergeArrivals([{ kind: 'intro', segs: [], bbox: tour.bbox }, ...tour.steps]) : []
 	);
+
+	// Fold the walk into each library it arrives at, so arriving is one step:
+	// the dot walks in, then becomes the library. `from` is where the walk
+	// starts: the last stop ridden to, or the previous library.
+	function mergeArrivals(list) {
+		const out = [];
+		for (const s of list) {
+			const walk = out.at(-1);
+			if (s.kind === 'library' && walk?.kind === 'walk' && walk.to_library) {
+				out.pop();
+				const before = out.at(-1);
+				const from =
+					before?.kind === 'library'
+						? tour.libraries[before.library - 1].name
+						: before && byId[before.segs.at(-1)].to_stop;
+				out.push({ ...s, segs: walk.segs, from });
+			} else {
+				out.push(s);
+			}
+		}
+		return out;
+	}
 	const active = $derived(Math.floor(progress));
 
 	onMount(async () => {
+		const mq = matchMedia(MOBILE_QUERY);
+		isMobile = mq.matches;
+		mq.addEventListener('change', (e) => switchLayout(e.matches));
 		tours = (await (await fetch(tourDataUrl)).json()).tours;
 		const m = location.hash.match(/^#tour-(\d+)$/);
 		if (m && tours.some((t) => t.id === +m[1])) selectTour(+m[1]);
 	});
 
 	async function selectTour(id) {
+		stopPlaying();
 		tourId = id;
 		progress = 0;
+		current = 0;
 		hoveredTour = null;
 		replaceState(id == null ? location.pathname + location.search : `#tour-${id}`, {});
 		await tick();
@@ -48,7 +85,7 @@
 	// the trigger line until the next card's top does.
 	let frame = null;
 	function onScroll() {
-		if (!tour || frame) return;
+		if (!tour || isMobile || frame) return;
 		frame = requestAnimationFrame(() => {
 			frame = null;
 			const tops = [...panel.querySelectorAll('.step, .end')].map((el) => el.offsetTop);
@@ -86,6 +123,7 @@
 			raf = requestAnimationFrame(glide);
 		};
 		const forward = (e) => {
+			if (isMobile) return;
 			e.preventDefault();
 			const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? panel.clientHeight : 1;
 			const max = panel.scrollHeight - panel.clientHeight;
@@ -114,13 +152,95 @@
 		panel.scrollTo({ top: el.offsetTop - panel.clientHeight * TRIGGER + 1, behavior: 'smooth' });
 	}
 
+	// Stepper (phones). How long the dot takes to play out step i: libraries
+	// and the intro just move the camera; walks and rides take longer the
+	// farther they go, within limits so short hops don't crawl and long rides
+	// don't drag.
+	function stepMs(i) {
+		const s = steps[i];
+		if (!s.segs.length) return 1100;
+		const metres = s.segs.reduce((sum, id) => sum + byId[id].meters, 0);
+		const ms = Math.max(1400, Math.min(4500, 900 + metres * 0.45));
+		// Arriving at a library: the walk, then a beat at the door.
+		return s.kind === 'library' ? ms + 900 : ms;
+	}
+
+	let playing = null;
+	function stopPlaying() {
+		if (playing) cancelAnimationFrame(playing);
+		playing = null;
+	}
+
+	// Show step i and play the dot through it. Moving on from the previous step
+	// carries straight on from where it rested; going back, skipping ahead or
+	// tapping the card again replays the step from its start.
+	function playTo(i) {
+		stopPlaying();
+		current = i;
+		const target = i === 0 ? 0 : i + REST;
+		let from = progress;
+		if (target <= from || target - from > 2) from = i;
+		if (from === target || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			progress = target;
+			return;
+		}
+		const duration = stepMs(i) + (from < i ? 500 : 0);
+		const t0 = performance.now();
+		const tickFrame = (now) => {
+			const t = Math.min(1, (now - t0) / duration);
+			progress = from + (target - from) * t * t * (3 - 2 * t); // smoothstep
+			playing = t < 1 ? requestAnimationFrame(tickFrame) : null;
+		};
+		playing = requestAnimationFrame(tickFrame);
+	}
+
+	const next = () => current < steps.length - 1 && playTo(current + 1);
+	const prev = () => current > 0 && playTo(current - 1);
+
+	// Horizontal swipes on the card step too; vertical ones are left alone so
+	// a long card can still scroll.
+	let touchStart = null;
+	function onTouchStart(e) {
+		const t = e.changedTouches[0];
+		touchStart = [t.clientX, t.clientY];
+	}
+	function onTouchEnd(e) {
+		if (!touchStart) return;
+		const t = e.changedTouches[0];
+		const dx = t.clientX - touchStart[0];
+		const dy = t.clientY - touchStart[1];
+		touchStart = null;
+		if (Math.abs(dx) < 50 || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
+		dx < 0 ? next() : prev();
+	}
+
+	// Crossing the phone breakpoint (rotating a tablet, resizing a window, an
+	// embed changing size) keeps the same step.
+	async function switchLayout(mobile) {
+		stopPlaying();
+		const step = isMobile ? current : active;
+		isMobile = mobile;
+		if (!tour) return;
+		if (mobile) {
+			current = step;
+			progress = step === 0 ? 0 : step + REST;
+		} else {
+			progress = step;
+			await tick();
+			const el = panel.querySelector(`.step[data-index="${step}"]`);
+			panel.scrollTo({ top: el.offsetTop - panel.clientHeight * TRIGGER + 1 });
+		}
+	}
+
 	// Scroll room after each card, in vh: longer walks and rides get more, so
 	// the dot moves at a steadier pace. It's a spacer inside the step (not a
 	// margin or padding) so the sticky card stays in view for the whole step.
 	function spacing(s) {
-		if (s.kind === 'intro' || s.kind === 'library') return 120;
+		if (!s.segs.length) return 120;
 		const metres = s.segs.reduce((sum, id) => sum + byId[id].meters, 0);
-		return Math.round(Math.min(480, 120 + metres / 17));
+		const vh = Math.min(480, 120 + metres / 17);
+		// Arriving at a library also leaves room to linger once there.
+		return Math.round(s.kind === 'library' ? vh + 60 : vh);
 	}
 
 	// Subway and LRT lines read "Line 1"; buses and streetcars just the number
@@ -142,7 +262,71 @@
 	<meta name="description" content="Ten tours of Toronto Public Library branches by TTC and on foot." />
 </svelte:head>
 
-<div class="app">
+<!-- A step card's contents, shared by the desktop scroll list and the phone stepper. -->
+{#snippet stepBody(s)}
+		{#if s.kind === 'intro'}
+			<span class="eyebrow" style:color={tour.color}>Tour {tour.id}</span>
+			<h2>{tour.title}</h2>
+			<div class="meta">
+				{tour.libraries.length} Toronto Public Libraries · {distance(tour.walk_km * 1000)} walking · {tour.rides} transit rides
+			</div>
+			<ol class="library-list">
+				{#each tour.libraries as lib (lib.n)}
+					<li><span class="num">{lib.n}</span>{lib.name}</li>
+				{/each}
+			</ol>
+			<div class="hint">{isMobile ? 'Tap Next to start →' : 'Scroll to start ↓'}</div>
+		{:else if s.kind === 'library'}
+			{@const lib = tour.libraries[s.library - 1]}
+			{#if s.segs.length}
+				{@const walk = byId[s.segs[0]]}
+				<div class="arrive">
+					<span class="chip walk" style:background={WALK_COLOR}>Walk</span>
+					{minutes(walk.minutes)} · {distance(walk.meters)}{#if s.from}&nbsp;from {s.from}{/if}
+				</div>
+			{/if}
+			<div class="library-head">
+				<span class="num big">{lib.n}</span>
+				<div>
+					<span class="eyebrow">
+						{s.library === 1 ? 'Start' : s.library === tour.libraries.length ? 'Final stop' : `Toronto Public Library ${lib.n} of ${tour.libraries.length}`}
+					</span>
+					<h3>{lib.name}</h3>
+				</div>
+			</div>
+			<div class="address">{lib.address}</div>
+			<a class="link" href={lib.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}>
+				Hours &amp; info at tpl.ca ↗
+			</a>
+		{:else if s.kind === 'walk'}
+			{@const seg = byId[s.segs[0]]}
+			<span class="chip walk" style:background={WALK_COLOR}>Walk</span>
+			<div class="instruction">
+				{s.transfer ? 'Transfer: walk' : 'Walk'}
+				{minutes(seg.minutes)} to <strong>{s.to}</strong>
+			</div>
+			<div class="meta">{distance(seg.meters)}</div>
+		{:else}
+			{@const segs = s.segs.map((id) => byId[id])}
+			{@const ride = segs[segs.length - 1]}
+			<span class="chip" style:background={ride.color} style:color={chipTextColor(ride)}>
+				{modeLabel(ride)} {chipText(ride)}
+			</span>
+			{#if segs.length > 1}
+				<div class="meta">Short walk to transfer ({minutes(segs[0].minutes)})</div>
+			{/if}
+			<div class="instruction">
+				Take the
+				<a href={ride.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}>
+					{ride.line_name}
+				</a>
+				from <strong>{ride.from_stop}</strong> to <strong>{ride.to_stop}</strong>
+			</div>
+			<div class="meta">{minutes(ride.minutes)} · {distance(ride.meters)}</div>
+		{/if}
+{/snippet}
+
+<div class="app" class:stepper={isMobile && tour}>
 	<aside class="panel" bind:this={panel} onscroll={onScroll}>
 		<div class="panel-top">
 			<header class="site-header">
@@ -197,6 +381,49 @@
 					</li>
 				{/each}
 			</ul>
+		{:else if isMobile}
+			{@const s = steps[current]}
+			{@const last = current === steps.length - 1}
+			<div class="stepper-body" style:--tour-color={tour.color}>
+				<!-- Swipes duplicate the Back/Next buttons, so they need no keyboard equivalent. -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="step {s.kind} active"
+					ontouchstart={onTouchStart}
+					ontouchend={onTouchEnd}
+				>
+					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+					<div class="card" onclick={() => playTo(current)}>
+						{@render stepBody(s)}
+					</div>
+					{#if last}
+						<p class="note">
+							Durations are rounded travel times on foot or on board, and don't include
+							waiting for transit. Routes favour less walking over the fastest trip, using
+							the TTC's weekday schedule.
+						</p>
+					{/if}
+				</div>
+			</div>
+			<nav class="stepper-controls" aria-label="Tour steps">
+				<button class="back" onclick={prev} disabled={current === 0}>‹ Back</button>
+				<div
+					class="stepper-progress"
+					role="progressbar"
+					aria-valuemin="1"
+					aria-valuemax={steps.length}
+					aria-valuenow={current + 1}
+				>
+					<span style:width="{(current / (steps.length - 1)) * 100}%" style:background={tour.color}></span>
+				</div>
+				{#if !last}
+					<button class="next" onclick={next}>{current === 0 ? 'Start' : 'Next'} ›</button>
+				{:else if tour.id < tours.length}
+					<button class="next" onclick={() => selectTour(tour.id + 1)}>Tour {tour.id + 1} ›</button>
+				{:else}
+					<button class="next" onclick={() => selectTour(null)}>All tours</button>
+				{/if}
+			</nav>
 		{:else}
 
 			<ol class="steps" style:--tour-color={tour.color}>
@@ -204,59 +431,7 @@
 					<li class="step {s.kind}" class:active={i === active} data-index={i}>
 						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 						<div class="card" onclick={() => goToStep(i)}>
-							{#if s.kind === 'intro'}
-								<span class="eyebrow" style:color={tour.color}>Tour {tour.id}</span>
-								<h2>{tour.title}</h2>
-								<div class="meta">
-									{tour.libraries.length} Toronto Public Libraries · {distance(tour.walk_km * 1000)} walking · {tour.rides} transit rides
-								</div>
-								<ol class="library-list">
-									{#each tour.libraries as lib (lib.n)}
-										<li><span class="num">{lib.n}</span>{lib.name}</li>
-									{/each}
-								</ol>
-								<div class="hint">Scroll to start ↓</div>
-							{:else if s.kind === 'library'}
-								{@const lib = tour.libraries[s.library - 1]}
-								<div class="library-head">
-									<span class="num big">{lib.n}</span>
-									<div>
-										<span class="eyebrow">
-											{s.library === 1 ? 'Start' : s.library === tour.libraries.length ? 'Final stop' : `Toronto Public Library ${lib.n} of ${tour.libraries.length}`}
-										</span>
-										<h3>{lib.name}</h3>
-									</div>
-								</div>
-								<div class="address">{lib.address}</div>
-								<a class="link" href={lib.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}>
-									Hours &amp; info at tpl.ca ↗
-								</a>
-							{:else if s.kind === 'walk'}
-								{@const seg = byId[s.segs[0]]}
-								<span class="chip walk" style:background={WALK_COLOR}>Walk</span>
-								<div class="instruction">
-									{s.transfer ? 'Transfer: walk' : 'Walk'}
-									{minutes(seg.minutes)} to <strong>{s.to}</strong>
-								</div>
-								<div class="meta">{distance(seg.meters)}</div>
-							{:else}
-								{@const segs = s.segs.map((id) => byId[id])}
-								{@const ride = segs[segs.length - 1]}
-								<span class="chip" style:background={ride.color} style:color={chipTextColor(ride)}>
-									{modeLabel(ride)} {chipText(ride)}
-								</span>
-								{#if segs.length > 1}
-									<div class="meta">Short walk to transfer ({minutes(segs[0].minutes)})</div>
-								{/if}
-								<div class="instruction">
-									Take the
-									<a href={ride.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}>
-										{ride.line_name}
-									</a>
-									from <strong>{ride.from_stop}</strong> to <strong>{ride.to_stop}</strong>
-								</div>
-								<div class="meta">{minutes(ride.minutes)} · {distance(ride.meters)}</div>
-							{/if}
+							{@render stepBody(s)}
 						</div>
 						<div class="spacer" style:height="{spacing(s)}vh"></div>
 					</li>
@@ -287,6 +462,7 @@
 				{steps}
 				{progress}
 				{hoveredTour}
+				easeIn={isMobile}
 				onselect={(id) => selectTour(id)}
 			/>
 		{/if}
@@ -294,6 +470,13 @@
 </div>
 
 <style>
+	/* No horizontal overscroll, or a sideways swipe on a phone's step card can
+	   trigger the browser's swipe-back and leave the page. */
+	:global(html),
+	:global(body) {
+		overscroll-behavior: none;
+	}
+
 	:global(body) {
 		overflow: hidden;
 	}
@@ -584,6 +767,17 @@
 		color: var(--brandWhite);
 	}
 
+	.arrive {
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--brandGray60);
+		margin-bottom: 10px;
+	}
+
+	.arrive .chip {
+		margin-right: 6px;
+	}
+
 	.library-head {
 		display: flex;
 		gap: 12px;
@@ -675,6 +869,61 @@
 			grid-row: 2;
 			border-right: 0;
 			border-top: 1px solid var(--brandGray);
+		}
+
+		/* In a tour, the map takes the rest of the screen above a fixed-height
+		   card and the Back/Next bar, so it doesn't resize between steps. */
+		.app.stepper {
+			grid-template-rows: minmax(0, 1fr) auto;
+		}
+
+		.app.stepper .panel {
+			overflow: hidden;
+		}
+
+		.stepper-body {
+			height: 190px;
+			overflow-y: auto;
+			padding: 12px 16px;
+		}
+
+		.stepper-body .card {
+			position: static;
+		}
+
+		.stepper-body .note {
+			margin: 10px 2px 0;
+		}
+
+		.stepper-controls {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+			border-top: 1px solid var(--brandGray);
+		}
+
+		.stepper-controls button {
+			min-width: 84px;
+			min-height: 40px;
+			font-size: 14px;
+		}
+
+		.stepper-controls .back:disabled {
+			opacity: 0.4;
+			cursor: default;
+		}
+
+		.stepper-progress {
+			flex: 1;
+			height: 4px;
+			background: var(--brandGray);
+		}
+
+		.stepper-progress span {
+			display: block;
+			height: 100%;
+			transition: width 0.3s;
 		}
 	}
 </style>
