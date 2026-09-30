@@ -1,13 +1,13 @@
 <script>
 
-	import '../../assets/global-styles.css';
+	import '../assets/global-styles.css';
 
 	import { onMount } from "svelte";
 
 	import maplibregl from "maplibre-gl";
 	import "maplibre-gl/dist/maplibre-gl.css";
 
-	import mapStyle from "../../assets/map-style.json";
+	import mapStyle from "../assets/map-style.json";
 
 	let map;
 
