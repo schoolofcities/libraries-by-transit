@@ -1,5 +1,6 @@
 <script>
 	import '../../assets/global-styles.css';
+	import PasswordGate from '$lib/PasswordGate.svelte';
 	import SwipeMap from './lib/SwipeMapStandalone.svelte';
 
 	let showInfo = true;
@@ -10,6 +11,8 @@
 		 (window.innerWidth <= 1100 && window.innerHeight > window.innerWidth));
 	const zoomOffset = isTabletOrPhone ? 0.18 : 0.25;
 </script>
+
+<PasswordGate />
 
 <svelte:head>
 	<title>Library access swipe map | School of Cities</title>
