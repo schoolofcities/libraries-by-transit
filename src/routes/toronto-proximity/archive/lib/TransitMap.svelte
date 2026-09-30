@@ -6,6 +6,7 @@
 	import { getStyle, MAP_OPTIONS, fitToToronto, LIBRARY_LAYER_PAINT,
 	         TRANSIT_LINE_PAINT, ISOCHRONE_COLOR_EXPR, addLibraryHoverPopup } from './mapConfig.js';
 	import Legend from './Legend.svelte';
+	import { DATA } from '../../data/index.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -17,8 +18,8 @@
 	let timeOfWeek = 'weekday';
 
 	const dataFiles = {
-    weekday:  '/public-libraries/data/isochrones_transit_weekday_window.geojson',
-    weekend:  '/public-libraries/data/isochrones_transit_weekend_window.geojson',
+    weekday:  DATA.transitWeekday,
+    weekend:  DATA.transitWeekend,
 	};
 
 	const timeLabels = {
@@ -62,12 +63,12 @@
 
 			map.addSource('libraries-transit', {
 				type: 'geojson',
-				data: '/public-libraries/data/libraries.geojson'
+				data: DATA.libraries
 			});
 
 			map.addSource('transit-lines', {
 				type: 'geojson',
-				data: '/public-libraries/data/ttc_main_lines.geojson'
+				data: DATA.ttcLines
 			});
 
 			map.addLayer({

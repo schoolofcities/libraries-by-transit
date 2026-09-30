@@ -6,6 +6,7 @@
 	import { getStyle, MAP_OPTIONS, fitToToronto, LIBRARY_LAYER_PAINT,
 	         TRANSIT_LINE_PAINT, ISOCHRONE_COLOR_EXPR, addLibraryHoverPopup } from './mapConfig.js';
 	import Legend from './Legend.svelte';
+	import { DATA } from '../../data/index.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -37,7 +38,7 @@
 
 			map.addSource('isochrones-walk', {
 				type: 'geojson',
-				data: '/public-libraries/data/isochrones_walk.geojson'
+				data: DATA.walk
 			});
 
 			map.on('click', 'iso-walk-fill', (e) => {  
@@ -58,12 +59,12 @@
 
 			map.addSource('libraries', {
 				type: 'geojson',
-				data: '/public-libraries/data/libraries.geojson'
+				data: DATA.libraries
 			});
 
 			map.addSource('transit-lines', {
 				type: 'geojson',
-				data: '/public-libraries/data/ttc_main_lines.geojson'
+				data: DATA.ttcLines
 			});
 
 			map.addLayer({

@@ -1,7 +1,7 @@
 <script>
 
 	import ChoroplethMap from './ChoroplethMap.svelte';
-	import { ALL_VARIABLE_IDS } from './demographics.js';
+	import { ALL_VARIABLE_IDS } from '../../lib/demographics.js';
 
 	let open = false;
 

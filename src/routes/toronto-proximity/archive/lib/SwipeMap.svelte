@@ -4,16 +4,16 @@
 	import maplibregl from "maplibre-gl";
 	import "maplibre-gl/dist/maplibre-gl.css";
 	import { getStyle, MAP_OPTIONS, fitToToronto, LIBRARY_LAYER_PAINT,
-	         TRANSIT_LINE_PAINT, ISOCHRONE_COLOR_EXPR, addLibraryHoverPopup } from './mapConfigStandalone.js';
-	import { lighten } from './utils.js';
-	import { DEMOGRAPHICS, CITY_AVG } from './demographics.js';
-	import Legend from './LegendStandalone.svelte';
+	         TRANSIT_LINE_PAINT, addLibraryHoverPopup } from './mapConfig.js';
+	import { lighten } from '../../lib/utils.js';
+	import { DEMOGRAPHICS, CITY_AVG } from '../../lib/demographics.js';
+	import Legend from './Legend.svelte';
+	import { DATA } from '../../data/index.js';
 
 	let leftContainer;
 	let rightContainer;
 	let leftMap;
 	let rightMap;
-	export let zoomOffset = 0;
 
 	const demographics = DEMOGRAPHICS;
 	const maxBarVal = 35;
@@ -47,8 +47,8 @@
 	let timeOfWeek = 'weekday';
 
 	const transitFiles = {
-		weekday: '/public-libraries/data/isochrones_transit_weekday_window.geojson',
-		weekend: '/public-libraries/data/isochrones_transit_weekend_window.geojson',
+		weekday: DATA.transitWeekday,
+		weekend: DATA.transitWeekend,
 	};
 
 	const timeLabels = {
@@ -123,19 +123,19 @@
 
 		leftMap.on('load', () => {
 
-			fitToToronto(leftMap); leftMap.setZoom(leftMap.getZoom() + zoomOffset);
+			fitToToronto(leftMap);
 
 			leftMap.addSource('census-tracts', {
 				type: 'geojson',
-				data: '/public-libraries/data/census_tracts_demographics.geojson',
+				data: DATA.censusTracts,
 			});
 			leftMap.addSource('libraries-left', {
 				type: 'geojson',
-				data: '/public-libraries/data/libraries.geojson',
+				data: DATA.libraries,
 			});
 			leftMap.addSource('transit-lines-left', {
 				type: 'geojson',
-				data: '/public-libraries/data/ttc_main_lines.geojson'
+				data: DATA.ttcLines
 			});
 
 			leftMap.addLayer({
@@ -179,11 +179,12 @@
 
 		// Right map
 		rightMap = new maplibregl.Map({ container: rightContainer, style, ...MAP_OPTIONS });
+		rightMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 		rightMap.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 100 }), 'bottom-right');
 
 		rightMap.on('load', () => {
 
-			fitToToronto(rightMap); rightMap.setZoom(rightMap.getZoom() + zoomOffset);
+			fitToToronto(rightMap);
 
 			rightMap.addSource('isochrones-transit', {
 				type: 'geojson',
@@ -191,11 +192,11 @@
 			});
 			rightMap.addSource('libraries-right', {
 				type: 'geojson',
-				data: '/public-libraries/data/libraries.geojson',
+				data: DATA.libraries,
 			});
 			rightMap.addSource('ttc-lines', {
 				type: 'geojson',
-				data: '/public-libraries/data/ttc_main_lines.geojson',
+				data: DATA.ttcLines,
 			});
 
 			rightMap.addLayer({
@@ -203,12 +204,12 @@
 				type: 'fill',
 				source: 'isochrones-transit',
 				paint: {
-					'fill-color': ISOCHRONE_COLOR_EXPR,
+					'fill-color': '#6D247A',
 					'fill-opacity': [
 						'match', ['get', 'time_bucket'],
-						'over_30',  0.85,
-						'15_to_30', 0.85,
-						'under_15', 0.85,
+						'over_30',  0.9,
+						'15_to_30', 0.4,
+						'under_15', 0.2,
 						0.2,
 					],
 					'fill-outline-color': 'transparent',
@@ -332,7 +333,7 @@
 		<Legend
 			title="Minutes to Library"
 			subtitle={timeLabel}
-			colors={['#516082', '#5FA5C1', '#A2D7F2']}
+			colors={['#C4A7C9', '#9865A1', '#6D247A']}
 			breakLabels={['15 min', '30 min']}
 		/>
 	</div>
@@ -452,7 +453,7 @@
 	}
 
 	.toggle button:hover  { background: #e0e0e0; }
-	.toggle button.active { background: #516082; color: white; }
+	.toggle button.active { background: #6D247A; color: white; }
 
 	/* ── Dropdown ─────────────────────────────────────────────────────────── */
 	.dropdown-wrap {

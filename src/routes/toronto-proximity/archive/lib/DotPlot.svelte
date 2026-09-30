@@ -1,6 +1,6 @@
 <script>
 
-	import { DOTPLOT_DATA, CITY_AVG } from './demographics.js';
+	import { DOTPLOT_DATA, CITY_AVG } from '../../lib/demographics.js';
 
 	const data = [...DOTPLOT_DATA].sort((a, b) => b.walk - a.walk);  // sorting by walk time descending
 

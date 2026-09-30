@@ -1,154 +1,346 @@
 <script>
-
 	import '../../assets/global-styles.css';
-	import TransitMap from '../../lib/TransitMap.svelte';
-	import WalkMap from '../../lib/WalkMap.svelte';
-	import SwipeMap from '../../lib/SwipeMap.svelte';
-	import StaticMaps from '../../lib/StaticMaps.svelte';
-	import DotPlot from '../../lib/DotPlot.svelte';
+	import SwipeMap from './lib/SwipeMapStandalone.svelte';
 
-	let transitMap;
-	let walkMap;
-	let syncing = false;
+	let showInfo = true;
 
-	function syncMaps(source, target) {
-		if (!target || syncing) return;
-		syncing = true;
-		target.jumpTo({
-			center:  source.getCenter(),
-			zoom:    source.getZoom(),
-			bearing: source.getBearing(),
-			pitch:   source.getPitch(),
-		});
-		syncing = false;
-	}
-
-	function onTransitMove(e) { syncMaps(e.detail, walkMap); }
-	function onWalkMove(e)    { syncMaps(e.detail, transitMap); }
-
+	const isTabletOrPhone =
+		typeof window !== 'undefined' &&
+		(window.innerWidth <= 1024 ||
+		 (window.innerWidth <= 1100 && window.innerHeight > window.innerWidth));
+	const zoomOffset = isTabletOrPhone ? 0.18 : 0.25;
 </script>
 
+<svelte:head>
+	<title>Library access swipe map | School of Cities</title>
+</svelte:head>
 
+<svelte:window on:keydown={(e) => { if (e.key === 'Escape') showInfo = false; }} />
 
-<main>
+<main class="swipe-page">
+	<SwipeMap {zoomOffset}/>
 
-	<div class="text">
-		<div class="title">
-			<h1>Is your local library close enough?</h1>
-			<h3>Comparing equity gaps in accessibility to Toronto Public Libraries across the city's equity-seeking groups</h3>
-			<p><a href="https://jamaps.github.io/about.html">Jeff Allen</a> & <a href="https://www.linkedin.com/in/polina-gorn-b2a1b8284/">Polina Gorn</a> /// July 2026</p>
+	<button class="info-btn" aria-label="About this map" on:click={() => (showInfo = true)}>i</button>
+
+	{#if showInfo}
+		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+		<div class="backdrop" on:click|self={() => (showInfo = false)}>
+			<div class="info-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
+				<button class="close-btn" aria-label="Close" on:click={() => (showInfo = false)}>&times;</button>
+				<h2 id="info-title">About this map</h2>
+				<p>This map is part of a School of Cities research project on mapping public transit and pedestrian accessibility to public libraries in Toronto. This interactive map allows to explore the overlay of census-tract aggregated demographic data with the walking+transit isochrones.</p>
+				<p class="subhead">How to use the map:</p>
+				<ul>
+					<li><b>Drag the slider</b> to compare the demographic data on the left with travel time to the nearest library on the right.</li>
+					<li>Use the <b>Variable</b> menu at the top to switch between population groups, and the <b>Weekday/Weekend</b> buttons to change the transit schedule.</li>
+				</ul>
+				<p class="phone-note">If you are viewing this webpage from your phone, it is highly advised to explore the data in landscape, or on larger screens (tablets/laptops).</p>
+				<p>If you are interested to learn more about the research and findings, <a href="https://schoolofcities.github.io/posts/spatial-access-to-public-libraries-toronto/" target="_blank" rel="noopener">read the study</a>.</p>
+				<button class="ok-btn" on:click={() => (showInfo = false)}>Explore the map</button>
+			</div>
 		</div>
-		
-	</div>
-
-	<div class="text">
-		<p>Spatial access to public libraries matters: proximity predicts visits and borrowing, but access can vary across travel modes and population groups. 
-		In the 21st century, the role of libraries has shifted significantly: nowadays, in the Canadian context, the libraries have significantly expanded their programming to serve vulnerable populations, including individuals experiencing homelessness, recent immigrants, seniors, etc. 
-		Therefore, library access among equity-seeking population groups is crucial. </p>
-		<p>
-		We analyze data in the City of Toronto, specifically asking two questions:
-
-		<p> <b>1. Coverage:</b> How does minimum travel time to the nearest library branch vary across Toronto by mode (walk, weekday transit, Saturday transit)? </p>
-		<p> <b> 2. Equity: </b> How do those travel times vary across different population groups that often have specific needs for library services and programs? </p>
-	</div>
-
-	<div class="text">
-		<h3>Methods</h3>
-		<p><b>Data.</b> 
-		<li> TPL branch points (n = 101, retrieved from Toronto Open Data, March 2026).</li>
-
-		<li> 200 metre hexagon grid.</li>
-
-		<li> 2021 Census Dissemination Area (DA) level attributes from Statistics Canada (population density, first generation immigrants, residents aged 0–14, residents aged 65+, low-income households (after–tax income under $30,000), visible minorities) </li>
-		
-		<li> OpenStreetMap data (extracted April 2026) for the street and active-transport network</li>
-		
-		<li> TTC GTFS feed dated 2026-05-23 for transit schedules. </li>
-		</p>
-
-		<p><b>Network Analysis.</b> 
-		Travel times computed in Python with the <b>r5py</b> package from the centroid of each cell in a 200 metre hex grid covering the City of Toronto boundary.</p>
-		<p>Three scenarios:</p>
-		<li>Walk: 3.6 km/h, maximum 60 minutes</li>
-		<li>Weekday transit: departure window Tuesday 2026-06-8 10:00–10:30, maximum 60 minutes</li>
-		<li>Saturday transit: departure window Saturday 2026-06-13 10:00–10:30, maximum 60 minutes</li>
-		<p>The isochrones show the significant improvement of library accessibility with the TTC network. On foot, 35% of residents can access the nearest library within 15 minutes, with 21% of the population requiring more than 30 minutes to reach the closest library. When transit is included, the share of residents unable to access a library within 30 minutes falls to 5%, and roughly 95% of the population can reach a library branch in under half an hour. Mean walk-plus-transit time drops to 16.8 minutes, saving about 4 minutes or 19% of travel time relative to walking.</p>
-		<br>
-		<br>
-	</div>
-
-	<!-- Section 1: Side-by-side isochrone maps -->
-	<div class="map-grid">
-		<TransitMap bind:map={transitMap} on:move={onTransitMove}/>
-		<WalkMap    bind:map={walkMap}    on:move={onWalkMove}/>
-	</div>
-
-	<div class="text">
-		<p>
-			The swiper map below allows to explore the overlay of census-tract aggregated demographic data with the walking+transit isochrones.
-			Based on the choropleth maps (that can all be explored in the dropdown section below the swiper map), census tracts with the highest rates of visible minority, immigrant, and low-income populations concentrate in the inner suburbs, which are simultaneously less dense areas of the city. 
-			Nevertheless, the fringes of the inner suburbs that do experience high percentage of the aforementioned populations also have lower rates of library access. 
-		</p>
-	</div>
-
-	<!-- Section 2: Swiper map -->
-	<div class="swipe-container">
-		<SwipeMap/>
-	</div>	
-	<br>
-
-	<!-- Section 3: Accordion with static choropleth maps -->
-	<StaticMaps/>
-
-	<div class="text">
-		<p>
-		Library access is broadly equitable across demographic groups. Population-weighted mean walk-plus-transit times range only from 16.9 to 17.3 minutes across all groups, and walking-only means from 20.9 to 21.8 minutes — deviating from the citywide averages of 16.9 and 20.9 minutes by at most half a minute by transit and one minute on foot. Every equity-seeking group sits marginally above the citywide average, with visible minorities and seniors showing the largest gaps. Across all groups, transit reduces travel time by approximately four minutes relative to walking, underscoring public transit's role in equalizing library access across the city.
-		</p>
-	</div>
-
-	<div class="text">
-    	<DotPlot/>
-	</div>
-
-	<div class="text">
-	<p> Future directions for developing this project may involve factoring in the programming and services provided in each library branch. Currently, the study looks into generalized library access, without accounting for the types of services each branch provides, and therefore the population groups it may attract. Filtering through the libraries that have programming catered to the needs of a specific population group can create a more nuanced picture of access to library services. </p>
-	</div>
-
+	{/if}
 </main>
 
-
-
 <style>
-
-	.map-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 12px;
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 0 12px;
+	.swipe-page {
+		width: 100vw;
+		height: 100dvh;
+		overflow: hidden;
 	}
 
-	@media (max-width: 800px) {
-		.map-grid { grid-template-columns: 1fr; gap: 8px; padding: 0 8px;}
+	.swipe-page :global(.swipe-wrap) {
+		height: 100dvh;
 	}
 
-	.swipe-container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 12px;
+	/* One font for the whole pop-up and button, matching the map labels */
+	/* ── Responsive tweaks for this full-screen page only ── */
+
+	/* The shared map hides the travel-time legend below 1024px (it was built
+	   for the shorter map on the story page). Full screen has room, so show it. */
+	.swipe-page :global(.right-legend) {
+		display: block;
 	}
 
-	h1 {
-    font-family: 'TradeGothicBold', Arial, sans-serif;
+	/* Keep "17.3 min" on one line on smaller screens */
+	.swipe-page :global(.bar-val) {
+		width: auto;
+		white-space: nowrap;
 	}
 
-	p, .text {
-		font-family: 'SourceSerifPro', Georgia, serif;
+	.info-btn, .backdrop {
+		font-family: 'OpenSans', sans-serif;
 	}
 
-	a {
-		font-family: 'SourceSerifPro', Georgia, serif;
+	/* Open Sans bold is its own font file, so bold text uses it directly */
+	.info-btn, .info-card h2, .info-card .subhead, .info-card b, .info-card a {
+		font-family: 'OpenSansBold', sans-serif;
+		font-weight: normal;
 	}
 
+	.info-btn {
+		position: absolute;
+		top: 12px;
+		right: 8px;
+		z-index: 20;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: none;
+		background: #516082;
+		color: white;
+		font-size: 15px;
+		cursor: pointer;
+		box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+	}
+	.info-btn:hover { background: #3f4c6b; }
+
+	.backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		background: rgba(0,0,0,0.35);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 16px;
+	}
+
+	.info-card {
+		position: relative;
+		background: white;
+		max-width: 480px;
+		max-height: calc(100dvh - 32px);
+		overflow-y: auto;
+		padding: 24px 28px 20px;
+		border-radius: 8px;
+		box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+		font-size: 14px;
+		line-height: 1.55;
+		color: #1a1a1a;
+	}
+
+	.info-card h2 {
+		margin: 0 0 10px;
+		font-size: 19px;
+	}
+
+	/* The site-wide stylesheet gives p and li their own font, size and
+	   spacing, which beat anything inherited from .info-card. Setting them
+	   directly here makes all body text in the pop-up identical. */
+	.info-card p, .info-card li {
+		font-family: 'OpenSans', sans-serif;
+		font-size: 14px;
+		line-height: 1.55;
+		color: #1a1a1a;
+		padding: 0;
+	}
+
+	.info-card p {
+		margin: 0 0 16px;
+	}
+
+	.info-card .subhead {
+		margin-bottom: 4px;
+	}
+
+	.info-card ul {
+		margin: 0 0 16px;
+		padding-left: 20px;
+	}
+
+	.info-card li { margin-bottom: 6px; }
+
+	.info-card a { color: #516082; }
+
+	.close-btn {
+		position: absolute;
+		top: 8px;
+		right: 10px;
+		border: none;
+		background: none;
+		font-size: 22px;
+		line-height: 1;
+		cursor: pointer;
+		color: #666;
+	}
+
+	.ok-btn {
+		border: none;
+		border-radius: 4px;
+		padding: 7px 14px;
+		background: #516082;
+		color: white;
+		font-family: 'OpenSans', sans-serif;
+		font-size: 13px;
+		cursor: pointer;
+	}
+	.ok-btn:hover { background: #3f4c6b; }
+	/* ── Bigger controls on tablets and phones ──────────────────────────
+	   The shared map shrinks its labels, legends and toggles below 1024px
+	   (to fit the short map on the story page). This full-screen page has
+	   room, so these rules size them back up. "main.swipe-page" makes each
+	   rule slightly more specific than the component's own, so these win. */
+
+	/* Tablets, small laptops and phones held sideways (601–1024px),
+	   plus large upright tablets up to 1100px (iPad Pro, Surface Pro) */
+	@media (max-width: 1024px), (max-width: 1100px) and (orientation: portrait) {
+		/* Variable menu sits top-left, with the demographic card below it */
+		main.swipe-page :global(.dropdown-wrap) {
+			top: 12px;
+			left: 52px;
+			transform: none;
+			font-size: 13px;
+			padding: 5px 10px;
+		}
+		main.swipe-page :global(.dropdown-wrap select) {
+			font-size: 14px;
+			padding: 4px 6px;
+		}
+		main.swipe-page :global(.left-label) {
+			top: 60px;
+			left: 52px;
+			max-width: 300px;
+			padding: 8px 12px;
+		}
+		main.swipe-page :global(.label-text) { font-size: 14px; margin-bottom: 6px; }
+		main.swipe-page :global(.label-sub)  { font-size: 11px; }
+		main.swipe-page :global(.bar-label)  { font-size: 12px; width: 92px; }
+		main.swipe-page :global(.bar-track)  { width: 110px; height: 12px; }
+		main.swipe-page :global(.bar-val)    { font-size: 12px; }
+		main.swipe-page :global(.chart-note) { font-size: 10px; margin-top: 4px; }
+		main.swipe-page :global(.bar-row)    { margin-bottom: 4px; gap: 4px; }
+
+		/* Walking + Transit box and Weekday/Weekend toggle */
+		main.swipe-page :global(.right-label) {
+			right: 8px;
+			font-size: 15px;
+			padding: 8px 10px;
+			gap: 6px;
+		}
+		main.swipe-page :global(.toggle button) {
+			font-size: 13px;
+			padding: 7px 14px;
+		}
+
+		/* Legends */
+		main.swipe-page :global(.legend)          { padding: 10px 12px; }
+		main.swipe-page :global(.legend-name)     { font-size: 13px; margin-bottom: 4px; }
+		main.swipe-page :global(.legend-subtitle) { font-size: 12px; }
+		main.swipe-page :global(.color-bar)       { width: 170px; height: 13px; }
+		main.swipe-page :global(.break-labels)    { width: 170px; font-size: 11px; }
+		main.swipe-page :global(.legend-item)     { font-size: 12px; }
+		main.swipe-page :global(.swatch)          { width: 12px; height: 12px; }
+		main.swipe-page :global(.swatch.line)     { height: 3px; }
+		main.swipe-page :global(.left-legend)     { bottom: 12px; left: 12px; }
+
+		/* Bigger slider handle, easier to grab with a finger */
+		main.swipe-page :global(.divider-handle) { width: 40px; height: 40px; font-size: 20px; }
+
+		/* "i" button: bigger, and just below the Walking + Transit box */
+		.info-btn {
+			top: 92px;
+			width: 36px;
+			height: 36px;
+			font-size: 18px;
+		}
+	}
+
+	/* Large upright tablets (iPad Pro, Surface Pro): scale the map's
+	   controls up so they take the same share of the screen as on an
+	   iPad mini. "zoom" enlarges an element and everything inside it. */
+	@media (min-width: 900px) and (max-width: 1100px) and (orientation: portrait) {
+		main.swipe-page :global(.dropdown-wrap),
+		main.swipe-page :global(.map-label),
+		main.swipe-page :global(.legend-slot),
+		main.swipe-page :global(.divider-handle),
+		.info-btn {
+			zoom: 1.3;
+		}
+	}
+
+	/* Phones held upright (≤600px): compact, uncluttered */
+	@media (max-width: 600px) {
+		main.swipe-page :global(.dropdown-wrap) {
+			left: 8px;
+			top: 8px;
+			padding: 4px 6px;
+		}
+		main.swipe-page :global(.dropdown-wrap select) {
+			font-size: 12px;
+			padding: 3px 4px;
+			max-width: 140px;
+		}
+		main.swipe-page :global(.right-label) {
+			right: 6px;
+			top: 8px;
+			font-size: 11px;
+			padding: 5px 7px;
+			gap: 4px;
+		}
+		main.swipe-page :global(.toggle button) {
+			font-size: 11px;
+			padding: 5px 8px;
+		}
+
+		/* Demographic card: bars and minutes only */
+		main.swipe-page :global(.left-label) {
+			display: block;
+			top: 72px;
+			left: 8px;
+			max-width: 200px;
+			padding: 5px 8px;
+		}
+		main.swipe-page :global(.label-sub)  { display: none; }
+		main.swipe-page :global(.label-text) { font-size: 11px; margin-bottom: 3px; }
+		main.swipe-page :global(.bar-label)  { font-size: 10px; width: 70px; }
+		main.swipe-page :global(.bar-track)  { width: 60px; height: 8px; }
+		main.swipe-page :global(.bar-val)    { font-size: 10px; }
+		main.swipe-page :global(.chart-note) { font-size: 8px; margin-top: 2px; }
+		main.swipe-page :global(.bar-row)    { margin-bottom: 2px; gap: 3px; }
+
+		/* Legends: smaller; the Library / Transit key appears once,
+		   stacked, in the travel-time legend */
+		main.swipe-page :global(.legend)          { padding: 6px 8px; }
+		main.swipe-page :global(.legend-name)     { font-size: 11px; margin-bottom: 2px; }
+		main.swipe-page :global(.legend-subtitle) { font-size: 10px; margin: 1px 0 4px; }
+		main.swipe-page :global(.color-bar)       { width: 110px; height: 9px; }
+		main.swipe-page :global(.break-labels)    { width: 110px; font-size: 9px; margin-bottom: 4px; }
+		main.swipe-page :global(.legend-item)     { font-size: 10px; }
+		main.swipe-page :global(.swatch)          { width: 9px; height: 9px; }
+		main.swipe-page :global(.left-legend .legend-extras) { display: none; }
+		main.swipe-page :global(.legend-extras) {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 2px;
+		}
+		main.swipe-page :global(.left-legend)  { bottom: 10px; left: 8px; }
+		main.swipe-page :global(.right-legend) { bottom: 32px; right: 8px; }
+
+		main.swipe-page :global(.divider-handle) { width: 32px; height: 32px; font-size: 16px; }
+
+		.info-btn {
+			top: 72px;
+			right: 8px;
+			width: 30px;
+			height: 30px;
+			font-size: 15px;
+		}
+	}
+
+	/* The phone tip in the About box only shows on upright phones */
+	.info-card .phone-note { display: none; }
+	@media (max-width: 600px) {
+		.info-card .phone-note {
+			display: block;
+			background: #eef1f6;
+			border-left: 3px solid #516082;
+			padding: 8px 10px;
+			border-radius: 4px;
+		}
+	}
+	/* Phones held sideways: hide the "% of population per census tract" line */
+	@media (orientation: landscape) and (max-height: 500px) {
+		main.swipe-page :global(.label-sub) { display: none; }
+	}
 </style>

@@ -4,8 +4,8 @@
 	import ctData from "../assets/census_tracts_demographics.geo.json";
 	import librariesData from "../assets/libraries.geo.json";
 	import ttcData from "../assets/ttc_main_lines.geo.json";
-	import { VARIABLES_BY_ID, CITY_AVG } from './demographics.js';
-	import { lighten } from './utils.js';
+	import { VARIABLES_BY_ID, CITY_AVG } from '../../lib/demographics.js';
+	import { lighten } from '../../lib/utils.js';
 
 	export let variable = 'visible_minority_pct';
 
