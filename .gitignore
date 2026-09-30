@@ -10,3 +10,6 @@ node_modules
 !.env.test
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# r5r routing inputs and network cache (large)
+src/routes/toronto-tour/data/r5/
