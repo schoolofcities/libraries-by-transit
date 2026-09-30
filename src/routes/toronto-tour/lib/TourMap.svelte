@@ -17,6 +17,10 @@
 		steps = [], // steps of the selected tour, including the intro
 		progress = 0, // step index + fraction through that step
 		hoveredTour = null,
+		// Stepper (phones): ease the camera in from the previous step at the start
+		// of each step, not out toward the next one at the end, so a step that
+		// has played out is still framed on itself.
+		easeIn = false,
 		onselect = () => {}
 	} = $props();
 
@@ -36,6 +40,9 @@
 	const MIN_ZOOM = 11;
 	const MAX_ZOOM = 16.5;
 	const BLEND = 0.3;
+	// A library step that includes the walk there: the dot arrives this far
+	// through the step, and rests at the library for the remainder.
+	const ARRIVE = 0.6;
 
 	// Rotate so Toronto's street grid runs up-down (same as the project's other maps).
 	const BEARING = -17;
@@ -338,7 +345,13 @@
 			if (s.kind === 'intro') {
 				return { fixed: true, ...fitRotated(tour.segments.flatMap((g) => g.coords), 50) };
 			}
-			if (s.kind === 'library') return { fixed: true, center: p.point, zoom: LIBRARY_ZOOM };
+			if (s.kind === 'library') {
+				const lib = tour.libraries[s.library - 1];
+				if (!p.parts.length) return { fixed: true, center: [lib.lon, lib.lat], zoom: LIBRARY_ZOOM };
+				// Walking in: hold one view that frames the walk and the library.
+				const fit = fitRotated([...p.parts.flatMap((part) => part.path.coords), [lib.lon, lib.lat]], 60);
+				return { fixed: true, center: fit.center, zoom: Math.max(MIN_ZOOM, Math.min(LIBRARY_ZOOM, fit.zoom)) };
+			}
 			const { zoom } = fitRotated(p.parts.flatMap((part) => part.path.coords), 60);
 			return { fixed: false, zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom)) };
 		});
@@ -394,7 +407,10 @@
 		const i = Math.max(0, Math.min(n - 1, Math.floor(prog)));
 		const frac = i === n - 1 ? 0 : Math.max(0, Math.min(1, prog - i));
 		const step = steps[i];
-		const here = along(paths[i], frac);
+		const library = step.kind === 'library';
+		const walkingIn = library && paths[i].parts.length > 0;
+		const here = along(paths[i], walkingIn ? Math.min(1, frac / ARRIVE) : frac);
+		const atLibrary = library && (!walkingIn || frac >= ARRIVE);
 
 		// Travelled so far: completed steps (only when the step changes), plus
 		// this step's part. The intro shows the whole tour at full strength.
@@ -405,26 +421,34 @@
 		map.getSource('progress').setData(collection(here.travelled.map((t) => line(t.seg, t.coords))));
 		// The dot takes the colour of what it's travelling on (dark blue at libraries).
 		const seg = here.travelled.at(-1)?.seg ?? paths[i].parts[0]?.seg;
-		const color = step.kind === 'library' || !seg ? '#1E3765' : (seg.color ?? WALK_COLOR);
-		const icon = (step.kind === 'library' ? 'book' : modeIcon(seg)) + (isLight(color) ? '-dark' : '');
+		const color = atLibrary || !seg ? '#1E3765' : (seg.color ?? WALK_COLOR);
+		const icon = (atLibrary ? 'book' : modeIcon(seg)) + (isLight(color) ? '-dark' : '');
+		// Once at a library the dot sits on its marker, not where the walk path
+		// meets the street.
+		const lib = library && tour.libraries[step.library - 1];
+		const dotPoint = atLibrary ? [lib.lon, lib.lat] : here.point;
 		map.getSource('dot').setData(
 			collection(
 				step.kind === 'intro'
 					? []
-					: [{ type: 'Feature', properties: { icon, color }, geometry: { type: 'Point', coordinates: here.point } }]
+					: [{ type: 'Feature', properties: { icon, color }, geometry: { type: 'Point', coordinates: dotPoint } }]
 			)
 		);
 
-		// Camera: follow this step, blending into the next step's start near the end.
+		// Camera: follow this step, blending into the next step's start near the
+		// end (or, with easeIn, out of the previous step's end near the start).
 		let cam = cameraAt(i, frac, here.point);
-		if (frac > 1 - BLEND && i < n - 1) {
-			const t = (frac - (1 - BLEND)) / BLEND;
+		const mix = (other, t) => {
 			const e = t * t * (3 - 2 * t); // smoothstep
-			const next = cameraAt(i + 1, 0, paths[i + 1].point);
-			cam = {
-				center: [lerp(cam.center[0], next.center[0], e), lerp(cam.center[1], next.center[1], e)],
-				zoom: lerp(cam.zoom, next.zoom, e)
+			return {
+				center: [lerp(cam.center[0], other.center[0], e), lerp(cam.center[1], other.center[1], e)],
+				zoom: lerp(cam.zoom, other.zoom, e)
 			};
+		};
+		if (easeIn) {
+			if (frac < BLEND && i > 0) cam = mix(cameraAt(i - 1, 1, along(paths[i - 1], 1).point), 1 - frac / BLEND);
+		} else if (frac > 1 - BLEND && i < n - 1) {
+			cam = mix(cameraAt(i + 1, 0, paths[i + 1].point), (frac - (1 - BLEND)) / BLEND);
 		}
 		map.jumpTo({ ...cam, bearing: BEARING });
 
