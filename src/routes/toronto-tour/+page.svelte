@@ -7,6 +7,7 @@
 	import { onMount, tick } from 'svelte';
 	import { replaceState } from '$app/navigation';
 	import '../../assets/global-styles.css';
+	import PasswordGate from '$lib/PasswordGate.svelte';
 	import TourMap from './lib/TourMap.svelte';
 	import { WALK_COLOR, BOOK_ICON, modeLabel, minutes, distance, segmentsById } from './lib/tour.js';
 	import tourDataUrl from './data/tour_app.json?url';
@@ -133,6 +134,8 @@
 		return seg.line === '1' ? 'var(--brandBlack)' : 'var(--brandWhite)';
 	}
 </script>
+
+<PasswordGate />
 
 <svelte:head>
 	<title>Toronto Public Library tours by transit | School of Cities</title>

@@ -14,7 +14,7 @@ const config = {
 		    assets: "docs"
 		}),
 		paths: {
-		    base: dev ? "" : "/public-libraries",
+		    base: dev ? "" : "/libraries-by-transit",
 		}
 	}
 };

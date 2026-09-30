@@ -1,6 +1,7 @@
 <script>
 
 	import '../../../assets/global-styles.css';
+	import PasswordGate from '$lib/PasswordGate.svelte';
 	import TransitMap from './lib/TransitMap.svelte';
 	import WalkMap from './lib/WalkMap.svelte';
 	import SwipeMap from './lib/SwipeMap.svelte';
@@ -27,6 +28,8 @@
 	function onWalkMove(e)    { syncMaps(e.detail, transitMap); }
 
 </script>
+
+<PasswordGate />
 
 
 
