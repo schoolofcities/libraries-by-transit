@@ -5,7 +5,6 @@
 	import "maplibre-gl/dist/maplibre-gl.css";
 	import { getStyle, MAP_OPTIONS, fitToToronto, LIBRARY_LAYER_PAINT,
 	         TRANSIT_LINE_PAINT, ISOCHRONE_COLOR_EXPR, addLibraryHoverPopup } from './mapConfigStandalone.js';
-	import { lighten } from './utils.js';
 	import { DEMOGRAPHICS, CITY_AVG } from './demographics.js';
 	import Legend from './LegendStandalone.svelte';
 	import { DATA } from '../data/index.js';
@@ -15,12 +14,84 @@
 	let leftMap;
 	let rightMap;
 	export let zoomOffset = 0;
+	// px to shift the map content down after fitting, to clear the legends at the top
+	// (wide screens only — compact layouts position the city and legends together, see arrangeView)
+	export let panOffset = 0;
+
+	function fitView(map) {
+		fitToToronto(map);
+		map.setZoom(map.getZoom() + zoomOffset);
+	}
+
+	// ── Initial layout ─────────────────────────────────────────────────────────
+	// Phones and tablets: the legends stay in their corners (demographic top left,
+	// travel-time bottom right); the city is fitted into the space between
+	// them so neither legend covers it. 
+	const COMPACT_MQ = '(max-width: 1024px), (max-width: 1100px) and (orientation: portrait), (hover: none) and (pointer: coarse)';
+	const SHORT_LANDSCAPE_MQ = '(orientation: landscape) and (max-height: 500px)';
+	const LEGEND_GAP = 10;      // px kept between a legend and the city
+	const MAX_BOUNDS_PAD = 0.15; // how far past the initial view people can pan, as a share of its size
+
+	let leftLegendEl;
+	let rightLegendEl;
+	let cityCoords = [];        // every census-tract vertex, for measuring the city on screen
+
+	function collectCoords(geojson) {
+		const out = [];
+		const walk = (c) => (typeof c[0] === 'number' ? out.push(c) : c.forEach(walk));
+		geojson.features.forEach(f => f.geometry && walk(f.geometry.coordinates));
+		return out;
+	}
+
+	// Top and bottom of the city outline in screen px (the map is rotated, so this
+	// projects real vertices rather than a bounding box)
+	function cityScreenExtent(map) {
+		let top = Infinity, bottom = -Infinity;
+		for (const c of cityCoords) {
+			const y = map.project(c).y;
+			if (y < top) top = y;
+			if (y > bottom) bottom = y;
+		}
+		return { top, bottom };
+	}
+
+	function arrangeView() {
+		const compact = matchMedia(COMPACT_MQ).matches && !matchMedia(SHORT_LANDSCAPE_MQ).matches;
+
+		if (!compact || !cityCoords.length) {
+			leftMap.panBy([0, -panOffset], { duration: 0 });
+		} else {
+			// Free band between the bottom of the top legend and the top of the bottom legend
+			const wrap = swipeContainer.getBoundingClientRect();
+			const bandTop    = leftLegendEl.getBoundingClientRect().bottom - wrap.top + LEGEND_GAP;
+			const bandBottom = rightLegendEl.getBoundingClientRect().top - wrap.top - LEGEND_GAP;
+			const band = bandBottom - bandTop;
+
+			// Zoom out if the city is taller than the band (e.g. landscape tablets)
+			let { top, bottom } = cityScreenExtent(leftMap);
+			if (band > 0 && bottom - top > band) {
+				leftMap.setZoom(leftMap.getZoom() - Math.log2((bottom - top) / band));
+				({ top, bottom } = cityScreenExtent(leftMap));
+			}
+
+			// Centre the city in the band (panBy syncs the right map too)
+			leftMap.panBy([0, (top + bottom) / 2 - (bandTop + bandBottom) / 2], { duration: 0 });
+		}
+
+		// Keep panning/zooming near Toronto: allow a little past the starting view, no further
+		const b = leftMap.getBounds();
+		const padX = (b.getEast() - b.getWest()) * MAX_BOUNDS_PAD;
+		const padY = (b.getNorth() - b.getSouth()) * MAX_BOUNDS_PAD;
+		const maxBounds = [[b.getWest() - padX, b.getSouth() - padY], [b.getEast() + padX, b.getNorth() + padY]];
+		leftMap.setMaxBounds(maxBounds);
+		rightMap.setMaxBounds(maxBounds);
+	}
 
 	const demographics = DEMOGRAPHICS;
 	const maxBarVal = 35;
 
-	$: barColor      = activeDemog.colors[activeDemog.colors.length - 1];
-	$: barColorLight = lighten(barColor);
+	const barColor      = '#F1C500';
+	const barColorLight = '#F9E899';
 	$: transitBarW   = (activeDemog.transit / maxBarVal) * 100;
 	$: walkBarW      = (activeDemog.walk    / maxBarVal) * 100;
 
@@ -44,20 +115,23 @@
 		}
 	}
 
-	// Transit toggle 
+	// Travel-mode toggle: walking + transit (weekday / weekend schedule) or walking only
 	let timeOfWeek = 'weekday';
 
 	const transitFiles = {
 		weekday: DATA.transitWeekday,
 		weekend: DATA.transitWeekend,
+		walk:    DATA.walk,
 	};
 
 	const timeLabels = {
 		weekday: 'Tuesday, 10:00-10:30am',
 		weekend: 'Saturday, 10:00-10:30am',
+		walk:    'No transit, any time',
 	};
 
 	$: timeLabel = timeLabels[timeOfWeek];
+	$: modeTitle = timeOfWeek === 'walk' ? 'Walking only' : 'Walking + Transit';
 
 	function setTimeOfWeek(val) {
 		timeOfWeek = val;
@@ -114,7 +188,18 @@
 
 	onMount(async () => {
 
-		const style = await getStyle();
+		// Census tracts are fetched here (not by URL in addSource) so the city outline can be measured for the initial layout
+		const [style, censusTracts] = await Promise.all([
+			getStyle(),
+			fetch(DATA.censusTracts).then(r => r.json()),
+		]);
+		cityCoords = collectCoords(censusTracts);
+
+		let resolveLeft, resolveRight;
+		const mapsLoaded = Promise.all([
+			new Promise(r => (resolveLeft = r)),
+			new Promise(r => (resolveRight = r)),
+		]);
 
 		const leftPopup  = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
 		const rightPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
@@ -124,11 +209,11 @@
 
 		leftMap.on('load', () => {
 
-			fitToToronto(leftMap); leftMap.setZoom(leftMap.getZoom() + zoomOffset);
+			fitView(leftMap);
 
 			leftMap.addSource('census-tracts', {
 				type: 'geojson',
-				data: DATA.censusTracts,
+				data: censusTracts,
 			});
 			leftMap.addSource('libraries-left', {
 				type: 'geojson',
@@ -176,6 +261,7 @@
 			});
 
 			leftMap.on('move', () => syncTo(leftMap, rightMap));
+			resolveLeft();
 		});
 
 		// Right map
@@ -184,7 +270,7 @@
 
 		rightMap.on('load', () => {
 
-			fitToToronto(rightMap); rightMap.setZoom(rightMap.getZoom() + zoomOffset);
+			fitView(rightMap);
 
 			rightMap.addSource('isochrones-transit', {
 				type: 'geojson',
@@ -233,7 +319,11 @@
 			addLibraryHoverPopup(rightMap, 'library-dots-right', rightPopup);
 
 			rightMap.on('move', () => syncTo(rightMap, leftMap));
+			resolveRight();
 		});
+
+		// Both maps fitted and legend fonts loaded (they set the legend heights) → lay out
+		Promise.all([mapsLoaded, document.fonts.ready]).then(arrangeView);
 
 		updateClip();
 
@@ -276,66 +366,64 @@
 		<div class="divider-handle">&#8644;</div>
 	</div>
 
-	<!-- Left label — demographic heading + bar chart (hidden on small screens) -->
-	<div class="map-label left-label">
-		<div class="label-text">
-			{activeDemog.label}
-			<span class="label-sub">% of population per census tract</span>
-		</div>
-		<div class="bar-rows">
-			<div class="bar-row">
-				<span class="bar-label">Walk + Transit</span>
-				<div class="bar-track">
-					<div class="bar" style="width:{transitBarW}%; background:{barColor};"></div>
-				</div>
-				<span class="bar-val">{activeDemog.transit} min</span>
-			</div>
-			<div class="bar-row">
-				<span class="bar-label">Walking only</span>
-				<div class="bar-track">
-					<div class="bar" style="width:{walkBarW}%; background:{barColorLight};"></div>
-				</div>
-				<span class="bar-val">{activeDemog.walk} min</span>
-			</div>
-			<div class="chart-note">City avg — Transit: {CITY_AVG.transit} min · Walk: {CITY_AVG.walk} min</div>
-		</div>
-	</div>
-
-	<!-- Right label — transit heading + weekday/weekend toggle -->
-	<div class="map-label right-label">
-		Walking + Transit
-		<div class="toggle">
-			<button class:active={timeOfWeek === 'weekday'} on:click={() => setTimeOfWeek('weekday')}>Weekday</button>
-			<button class:active={timeOfWeek === 'weekend'} on:click={() => setTimeOfWeek('weekend')}>Weekend</button>
-		</div>
-	</div>
-
-	<!-- Variable dropdown — centred at top -->
-	<div class="dropdown-wrap">
-		<label for="demog-select">Variable:</label>
-		<select id="demog-select" on:change={(e) => setDemographic(demographics.find(d => d.id === e.target.value))}>
-			{#each demographics as d}
-				<option value={d.id}>{d.label}</option>
-			{/each}
-		</select>
-	</div>
-
-	<!-- Legends — hidden on small screens -->
-	<div class="legend-slot left-legend">
+	<!-- Left legend — variable dropdown, color scale, bar chart, library/transit -->
+	<div class="legend-slot left-legend" bind:this={leftLegendEl}>
 		<Legend
-			title={activeDemog.label}
+			horizontal
+			title="% of population per census tract"
 			colors={activeDemog.colors}
 			breakLabels={activeDemog.breaks.map(b => `${b}%`)}
-		/>
+		>
+			<div slot="header" class="dropdown-wrap">
+				<label for="demog-select">Variable:</label>
+				<select id="demog-select" on:change={(e) => setDemographic(demographics.find(d => d.id === e.target.value))}>
+					{#each demographics as d}
+						<option value={d.id}>{d.label}</option>
+					{/each}
+				</select>
+			</div>
+
+			<!-- Bar chart — hidden on mobile -->
+			<div class="bar-rows">
+				<div class="bar-row">
+					<span class="bar-label">Walk + Transit</span>
+					<div class="bar-track">
+						<div class="bar" style="width:{transitBarW}%; background:{barColor};"></div>
+					</div>
+					<span class="bar-val">{activeDemog.transit} min</span>
+				</div>
+				<div class="bar-row">
+					<span class="bar-label">Walking only</span>
+					<div class="bar-track">
+						<div class="bar" style="width:{walkBarW}%; background:{barColorLight};"></div>
+					</div>
+					<span class="bar-val">{activeDemog.walk} min</span>
+				</div>
+				<div class="chart-note">City avg — Transit: {CITY_AVG.transit} min · Walk: {CITY_AVG.walk} min</div>
+			</div>
+		</Legend>
 	</div>
 
-	<div class="legend-slot right-legend">
+	<!-- Right legend — travel-mode heading, weekday/weekend/walking toggle, minutes scale
+	     (Library / Transit key is shown once, in the left legend) -->
+	<div class="legend-slot right-legend" bind:this={rightLegendEl}>
 		<Legend
+			horizontal
+			showExtras={false}
 			title="Minutes to Library"
 			subtitle={timeLabel}
 			colors={['#516082', '#5FA5C1', '#A2D7F2']}
 			breakLabels={['15 min', '30 min']}
-		/>
+		>
+			<div slot="lead" class="mode-control">
+				<div class="mode-title">{modeTitle}</div>
+				<div class="toggle">
+					<button class:active={timeOfWeek === 'weekday'} on:click={() => setTimeOfWeek('weekday')}>Weekday</button>
+					<button class:active={timeOfWeek === 'weekend'} on:click={() => setTimeOfWeek('weekend')}>Weekend</button>
+					<button class:active={timeOfWeek === 'walk'}    on:click={() => setTimeOfWeek('walk')}>Walking</button>
+				</div>
+			</div>
+		</Legend>
 	</div>
 
 </div>
@@ -362,7 +450,6 @@
 	.left-map  { z-index: 2; }
 	.right-map { z-index: 1; }
 
-	/* ── Divider ──────────────────────────────────────────────────────────── */
 	.divider {
 		position: absolute;
 		top: 0; bottom: 0;
@@ -391,47 +478,20 @@
 		cursor: col-resize;
 	}
 
-	/* ── Labels ───────────────────────────────────────────────────────────── */
-	.map-label {
-		position: absolute;
-		top: 12px;
-		z-index: 10;
-		background: white;
-		padding: 8px 12px;
-		border-radius: 6px;
-		font-family: 'OpenSans', sans-serif;
-		font-size: 13px;
-		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-		pointer-events: none;
-		max-width: 280px;
-	}
-
-	.left-label  { left: 52px; }
-
-	.right-label {
-		right: 44px;
+	/* ── Travel-mode heading + toggle (inside right legend)  */
+	.mode-control {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-end;
+		align-items: flex-start;
 		gap: 4px;
-		pointer-events: all;
+		pointer-events: auto;   /* Legend box itself is pointer-events: none */
+	}
+
+	.mode-title {
 		font-family: 'TradeGothicBold', sans-serif;
+		font-size: 14px;
 	}
 
-	.label-text {
-		font-size: 13px;
-		font-family: 'TradeGothicBold', sans-serif;
-		margin-bottom: 6px;
-	}
-
-	.label-sub {
-		font-size: 10px;
-		font-weight: normal;
-		color: #666;
-		display: block;
-	}
-
-	/* ── Toggle ───────────────────────────────────────────────────────────── */
 	.toggle {
 		display: flex;
 		gap: 3px;
@@ -446,7 +506,7 @@
 		border-radius: 4px;
 		background: transparent;
 		font-family: 'OpenSans', sans-serif;
-		font-size: 11px;
+		font-size: 12px;
 		cursor: pointer;
 		color: #333;
 		transition: background 0.15s;
@@ -455,33 +515,28 @@
 	.toggle button:hover  { background: #e0e0e0; }
 	.toggle button.active { background: #516082; color: white; }
 
-	/* ── Dropdown ─────────────────────────────────────────────────────────── */
+	/* ── Dropdown (inside left legend)  */
 	.dropdown-wrap {
-		position: absolute;
-		top: 12px;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 10;
-		background: white;
-		padding: 2px 5px;
-		border-radius: 6px;
-		font-family: 'OpenSans', sans-serif;
-		font-size: 12px;
-		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 		display: flex;
 		align-items: center;
 		gap: 5px;
+		margin-bottom: 8px;
+		font-size: 13px;
+		pointer-events: auto;   /* Legend box itself is pointer-events: none */
 	}
 
 	.dropdown-wrap select {
 		border: 1px solid #ccc;
 		border-radius: 4px;
 		padding: 2px 4px;
-		font-size: 12px;
+		font-size: 13px;
 		cursor: pointer;
+		min-width: 0;
+		flex: 1;
 	}
 
-	/* ── Bar chart ────────────────────────────────────────────────────────── */
+	/* ── Bar chart (inside left legend)  */
+
 	.bar-row {
 		display: flex;
 		align-items: center;
@@ -490,16 +545,17 @@
 	}
 
 	.bar-label {
-		font-size: 11px;
+		font-size: 12px;
 		font-weight: normal;
 		color: #444;
-		width: 80px;
+		width: 88px;
 		flex-shrink: 0;
 	}
 
 	.bar-track {
 		width: 100px;
-		flex-shrink: 0;
+		flex-shrink: 1;     /* shrinks rather than overflowing when the legend is width-capped */
+		min-width: 40px;
 		background: #f0f0f0;
 		height: 12px;
 		border-radius: 1px;
@@ -513,114 +569,77 @@
 	}
 
 	.bar-val {
-		font-size: 11px;
+		font-size: 12px;
 		font-weight: normal;
 		color: #333;
-		width: 46px;
+		width: 50px;
 		flex-shrink: 0;
+		padding-left: 4px;
 	}
 
 	.chart-note {
-		font-size: 9px;
+		font-size: 10px;
 		color: #999;
 		font-weight: normal;
 		margin-top: 4px;
 	}
 
-	/* ── Legends ──────────────────────────────────────────────────────────── */
+	/* ── Legends  */
 	.legend-slot {
 		position: absolute;
 		z-index: 10;
 	}
 
-	.left-legend  { bottom: 36px; left: 12px; }
-	.right-legend { bottom: 36px; right: 12px; }
+	.left-legend  { top: 12px; left: 52px;  max-width: calc(100% - 52px - 440px); }
+	.right-legend { top: 12px; right: 44px; }
 
-	/* ── Tablet (≤1024px) — hide bar chart, legends; stack dropdown below headings ── */
+	/* "Minutes to Library" title — 1px larger than the legend's default title size */
+	.right-legend :global(.legend .legend-name) { font-size: 13px; }
+
+	/* ── Tablet (≤1024px) — compact legends ── */
 	@media (max-width: 1024px) {
 		.swipe-wrap { height: 440px; }
 
-		/* Left label — smaller, tighter */
-		.left-label { 
-			left: 45px; 
-			max-width: 170px; 
-			font-size: 10px; 
-			padding: 4px 7px;
-		}
-		.label-text { font-size: 10px; margin-bottom: 3px; }
-		.label-sub  { font-size: 8px; }
-
 		/* Bar chart — smaller */
-		.bar-label  { font-size: 9px; width: 65px; }
+		.bar-label  { font-size: 10px; width: 72px; }
 		.bar-track  { width: 70px; height: 9px; }
-		.bar-val    { font-size: 9px; width: 36px; }
-		.chart-note { font-size: 8px; margin-top: 2px; }
+		.bar-val    { font-size: 10px; width: 40px; }
+		.chart-note { font-size: 9px; margin-top: 2px; }
 		.bar-row    { margin-bottom: 2px; gap: 2px; }
 
-		/* Right label */
-		.right-label { right: 6px; font-size: 10px; padding: 4px 7px; font-family: 'TradeGothicBold', sans-serif;}
-		.toggle button { padding: 2px 6px; font-size: 9px; }
+		/* Travel-mode heading + toggle */
+		.mode-title { font-size: 11px; }
+		.right-legend :global(.legend .legend-name) { font-size: 11px; }
+		.toggle button { padding: 2px 6px; font-size: 10px; }
 
-		/* Dropdown below toggle */
-		.dropdown-wrap {
-			bottom: auto;
-			top: 12px;
-			right: auto;
-			left: 230px;
-			transform: none;
-			font-size: 10px;
-			padding: 3px 7px;
-		}
-		.dropdown-wrap select { font-size: 10px; }
+		/* Dropdown */
+		.dropdown-wrap { font-size: 11px; margin-bottom: 5px; }
+		.dropdown-wrap select { font-size: 11px; max-width: 150px; }
 
-		/* Left legend — smaller position offset (internal sizing handled by Legend.svelte) */
-		.left-legend { 
-			bottom: 8px; 
-			left: 6px; 
-		}
-
-		/* Hide right legend */
-		.right-legend { display: none; }
+		/* Legend positions (internal sizing handled by LegendStandalone.svelte) */
+		/* Demographic legend across the top (between zoom buttons and the "i" button);
+		   travel-time legend at the bottom right, above the scale bar */
+		.left-legend  { top: 8px; left: 45px; max-width: calc(100% - 45px - 52px); }
+		.right-legend { top: auto; bottom: 40px; right: 8px; }
 
 		.divider-handle { width: 24px; height: 24px; font-size: 14px; }
 	}
 
-	/* ── Mobile (≤600px) ──────────────────────────────────────────────────── */
+	/* ── Mobile (≤600px) */
 	@media (max-width: 600px) {
     .swipe-wrap { height: 380px; }
 
-    /* Hide left label entirely */
-    .left-label { display: none; }
-
-    /* Move dropdown to top left */
-    .dropdown-wrap {
-        top: 12px;
-        left: 12px;
-        right: auto;
-        bottom: auto;
-        transform: none;
-        background: white;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        padding: 4px 8px;
-        font-size: 10px;
-    }
+    /* Dropdown — drop the label to save width */
     .dropdown-wrap label { display: none; }
-    .dropdown-wrap select {
-        font-size: 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 2px 4px;
-        max-width: 130px;
-    }
+    .dropdown-wrap select { max-width: 130px; }
 
-    /* Keep left legend bottom left */
-    .left-legend { display: block; }
+    /* Not enough width for both legends across the top: demographic legend stays
+       top left (zoom buttons are hidden, so it can sit in the corner) and the
+       travel-time legend moves to the bottom right, above the scale bar */
+    .left-legend  { top: 8px; left: 8px; max-width: calc(100% - 16px - 38px); }
+    .right-legend { top: auto; bottom: 52px; right: 8px; max-width: calc(100% - 16px); }
 
-    /* Hide right legend */
-    .right-legend { display: none; }
-
-    /* Hide zoom buttons — these classes are injected by MapLibre at runtime,
-       so :global() tells Svelte not to scope-check them against this file's markup */
+    /* Hide zoom buttons */
     :global(.maplibregl-ctrl-top-left),
     :global(.maplibregl-ctrl-top-right) { display: none; }
 }
