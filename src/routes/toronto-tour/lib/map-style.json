@@ -1183,18 +1183,63 @@
 			}
 		},
 		{
+			"id": "rail-service",
+			"type": "line",
+			"source": "osm",
+			"source-layer": "streets",
+			"minzoom": 13,
+			"filter": [
+				"all",
+				[
+					"==",
+					[
+						"get",
+						"kind"
+					],
+					"rail"
+				],
+				[
+					"has",
+					"service"
+				]
+			],
+			"layout": {
+				"line-cap": "butt",
+				"line-join": "round",
+				"visibility": "visible"
+			},
+			"paint": {
+				"line-color": "#e4e4e0",
+				"line-width": 0.5,
+				"line-dasharray": [
+					6,
+					3
+				]
+			}
+		},
+		{
 			"id": "rail",
 			"type": "line",
 			"source": "osm",
 			"source-layer": "streets",
 			"minzoom": 8,
 			"filter": [
-				"==",
+				"all",
 				[
-					"get",
-					"kind"
+					"==",
+					[
+						"get",
+						"kind"
+					],
+					"rail"
 				],
-				"rail"
+				[
+					"!",
+					[
+						"has",
+						"service"
+					]
+				]
 			],
 			"layout": {
 				"line-cap": "butt",

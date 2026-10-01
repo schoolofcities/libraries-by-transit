@@ -8,6 +8,7 @@
 	import { replaceState } from '$app/navigation';
 	import '../../assets/global-styles.css';
 	import PasswordGate from '$lib/PasswordGate.svelte';
+	import sofcLogo from '../../assets/sofc-uoft-logo-black.svg';
 	import TourMap from './lib/TourMap.svelte';
 	import { WALK_COLOR, BOOK_ICON, modeLabel, minutes, distance, segmentsById } from './lib/tour.js';
 	import tourDataUrl from './data/tour_app.json?url';
@@ -243,11 +244,11 @@
 		return Math.round(s.kind === 'library' ? vh + 60 : vh);
 	}
 
-	// Subway and LRT lines read "Line 1"; buses and streetcars just the number
-	// (so the 7 Bathurst bus isn't mistaken for a line).
+	// Buses and streetcars get their mode in front ("Bus 7"); subway and LRT
+	// lines are just "Line 1".
 	function chipText(seg) {
 		const isLine = seg.mode === 'SUBWAY' || modeLabel(seg) === 'LRT';
-		return isLine ? `Line ${seg.line}` : seg.line;
+		return isLine ? `Line ${seg.line}` : `${modeLabel(seg)} ${seg.line}`;
 	}
 
 	function chipTextColor(seg) {
@@ -268,11 +269,13 @@
 			<span class="eyebrow" style:color={tour.color}>Tour {tour.id}</span>
 			<h2>{tour.title}</h2>
 			<div class="meta">
-				{tour.libraries.length} Toronto Public Libraries · {distance(tour.walk_km * 1000)} walking · {tour.rides} transit rides
+				<span class="stat">{tour.libraries.length} Toronto Public Libraries</span> ·
+				<span class="stat">{distance(tour.walk_km * 1000)} walking</span> ·
+				<span class="stat">{tour.rides} transit rides</span>
 			</div>
 			<ol class="library-list">
 				{#each tour.libraries as lib (lib.n)}
-					<li><span class="num">{lib.n}</span>{lib.name}</li>
+					<li><span class="list-icon" style:background={tour.color} aria-hidden="true">{@html BOOK_ICON}</span>{lib.n} · {lib.name}</li>
 				{/each}
 			</ol>
 			<div class="hint">{isMobile ? 'Tap Next to start →' : 'Scroll to start ↓'}</div>
@@ -286,7 +289,7 @@
 				</div>
 			{/if}
 			<div class="library-head">
-				<span class="num big">{lib.n}</span>
+				<span class="library-icon" aria-hidden="true">{@html BOOK_ICON}</span>
 				<div>
 					<span class="eyebrow">
 						{s.library === 1 ? 'Start' : s.library === tour.libraries.length ? 'Final stop' : `Toronto Public Library ${lib.n} of ${tour.libraries.length}`}
@@ -310,10 +313,10 @@
 			{@const segs = s.segs.map((id) => byId[id])}
 			{@const ride = segs[segs.length - 1]}
 			<span class="chip" style:background={ride.color} style:color={chipTextColor(ride)}>
-				{modeLabel(ride)} {chipText(ride)}
+				{chipText(ride)}
 			</span>
 			{#if segs.length > 1}
-				<div class="meta">Short walk to transfer ({minutes(segs[0].minutes)})</div>
+				<div class="meta">Short walk {s.transfer ? 'to transfer' : 'to the stop'} ({minutes(segs[0].minutes)})</div>
 			{/if}
 			<div class="instruction">
 				Take the
@@ -334,13 +337,12 @@
 					{#each tours as t (t.id)}<span style:background={t.color}></span>{/each}
 				</div>
 				<div class="title-row">
-					<span class="badge" aria-hidden="true">{@html BOOK_ICON}</span>
-					<h1>Toronto Public Library tours</h1>
+					<h1>Visit every Toronto library by transit</h1>
 				</div>
 				<ul class="facts">
-					<li>{tours.length} tours</li>
 					<li>{tours.reduce((n, t) => n + t.libraries.length, 0)} branches</li>
-					<li>via TTC</li>
+					<li>{tours.length} tours</li>
+					<li>via public transit</li>
 				</ul>
 			</header>
 			{#if tour}
@@ -360,6 +362,18 @@
 		</div>
 
 		{#if !tour}
+			<!-- TODO: point "School of Cities" at the project article once it's published; the homepage is a placeholder. -->
+			<div class="credits">
+				<p class="note">
+					Itineraries planned by Lanrick Bennett Jr.
+					Map by Jeff Allen. Read more at the
+					<a href="https://schoolofcities.utoronto.ca/" target="_blank" rel="noopener">School of Cities</a>.
+					Routes are based on TTC schedules and library information from September 2026. Branches can
+					close temporarily and services can change, so check
+					<a href="https://www.tpl.ca/" target="_blank" rel="noopener">tpl.ca</a> and
+					<a href="https://www.ttc.ca/" target="_blank" rel="noopener">ttc.ca</a> before you go.
+				</p>
+			</div>
 			<ul class="tour-list">
 				{#each tours as t (t.id)}
 					<li>
@@ -371,16 +385,18 @@
 							onfocus={() => (hoveredTour = t.id)}
 							onblur={() => (hoveredTour = null)}
 						>
-							<span class="swatch" style:background={t.color}></span>
+							<span class="tour-icon" style:background={t.color} aria-hidden="true">{@html BOOK_ICON}</span>
 							<span class="tour-card-text">
 								<span class="eyebrow">Tour {t.id}</span>
 								<span class="tour-title">{t.title}</span>
-								<span class="meta">{distance(t.walk_km * 1000)} walking · {t.rides} transit rides</span>
 							</span>
 						</button>
 					</li>
 				{/each}
 			</ul>
+			<a class="sofc-logo" href="https://schoolofcities.utoronto.ca/" target="_blank" rel="noopener">
+				<img src={sofcLogo} alt="School of Cities, University of Toronto" />
+			</a>
 		{:else if isMobile}
 			{@const s = steps[current]}
 			{@const last = current === steps.length - 1}
@@ -400,7 +416,7 @@
 						<p class="note">
 							Durations are rounded travel times on foot or on board, and don't include
 							waiting for transit. Routes favour less walking over the fastest trip, using
-							the TTC's weekday schedule.
+							the TTC's weekday schedule for September 2026.
 						</p>
 					{/if}
 				</div>
@@ -441,7 +457,7 @@
 					<p class="note">
 						Durations are rounded travel times on foot or on board, and don't include
 						waiting for transit. Routes favour less walking over the fastest trip, using
-						the TTC's weekday schedule.
+						the TTC's weekday schedule for September 2026.
 					</p>
 					<div class="end-buttons">
 						<button class="back" onclick={() => selectTour(null)}>← All tours</button>
@@ -568,6 +584,11 @@
 		line-height: 1.5;
 	}
 
+	.stat {
+		padding: 0 3px;
+		background: rgba(241, 197, 0, 0.16); /* --brandYellow, faded */
+	}
+
 	/* Overview */
 
 	.site-header {
@@ -590,23 +611,6 @@
 		gap: 12px;
 	}
 
-	.badge {
-		flex: none;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 38px;
-		height: 38px;
-		border-radius: 50%;
-		background: var(--brandDarkBlue);
-		color: var(--brandWhite);
-	}
-
-	.badge :global(svg) {
-		width: 22px;
-		height: 22px;
-	}
-
 	.site-header h1 {
 		font-size: 28px;
 		line-height: 1.1;
@@ -622,13 +626,14 @@
 		padding: 0;
 	}
 
+	/* Same faded yellow as the stats in each tour's intro. */
 	.facts li {
-		font-family: OpenSans, sans-serif;
+		font-family: OpenSansBold, sans-serif;
 		font-size: 12px;
 		line-height: 1;
 		padding: 6px 10px;
 		border-radius: 0;
-		background: #eef1f6;
+		background: rgba(241, 197, 0, 0.16); /* --brandYellow, faded */
 		color: var(--brandDarkBlue);
 	}
 
@@ -641,7 +646,7 @@
 	.tour-card {
 		display: flex;
 		gap: 12px;
-		align-items: stretch;
+		align-items: center;
 		width: 100%;
 		text-align: left;
 		background: none;
@@ -657,9 +662,30 @@
 		background: #f4f5f1;
 	}
 
-	.swatch {
-		flex: 0 0 6px;
-		border-radius: 0;
+	/* Same look as the library dots on the overview map: the tour's colour
+	   with a white outline and book. */
+	.tour-icon {
+		flex: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--brandDarkBlue);
+		border: 2px solid var(--brandWhite);
+		box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+		color: var(--brandWhite);
+	}
+
+	.tour-icon :global(svg) {
+		width: 15px;
+		height: 15px;
+	}
+
+	.tour-card .eyebrow {
+		font-family: OpenSansItalic, sans-serif;
+		color: var(--brandDarkBlue);
 	}
 
 	.tour-card-text {
@@ -719,6 +745,26 @@
 		background: var(--brandDarkBlue);
 		border-color: var(--brandDarkBlue);
 		color: var(--brandWhite);
+	}
+
+	/* Hover: the light buttons and the tour menu take a pale blue fill, the
+	   dark Next button lightens to the mid brand blue. */
+	.back,
+	.next,
+	.tour-header select {
+		cursor: pointer;
+		transition: background-color 0.15s, border-color 0.15s;
+	}
+
+	.back:hover:not(:disabled),
+	.tour-header select:hover {
+		background: #eef1f6;
+		border-color: var(--brandDarkBlue);
+	}
+
+	.next:hover {
+		background: var(--brandMedBlue);
+		border-color: var(--brandMedBlue);
 	}
 
 	.steps {
@@ -785,29 +831,42 @@
 		margin-bottom: 6px;
 	}
 
-	.num {
-		display: inline-block;
+	/* Small library icon in the tour's colour, like the overview map. */
+	.list-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		width: 20px;
 		height: 20px;
 		margin-right: 8px;
+		vertical-align: middle;
 		border-radius: 50%;
-		border: 2px solid var(--brandDarkBlue);
-		color: var(--brandDarkBlue);
-		font-family: OpenSansBold, sans-serif;
-		font-size: 10px;
-		line-height: 20px;
-		text-align: center;
-		flex: none;
+		color: var(--brandWhite);
 	}
 
-	.num.big {
+	.list-icon :global(svg) {
+		width: 12px;
+		height: 12px;
+	}
+
+	/* Same as the library markers on the map. */
+	.library-icon {
+		flex: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		width: 34px;
 		height: 34px;
-		line-height: 34px;
-		font-size: 15px;
-		margin: 0;
+		border-radius: 50%;
 		background: var(--brandDarkBlue);
+		border: 2px solid var(--brandWhite);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 		color: var(--brandWhite);
+	}
+
+	.library-icon :global(svg) {
+		width: 18px;
+		height: 18px;
 	}
 
 	.library-list {
@@ -839,6 +898,38 @@
 		font-size: 12px;
 		line-height: 1.6;
 		color: var(--brandGray60);
+	}
+
+	.credits {
+		padding: 12px 24px;
+		border-bottom: 1px solid var(--brandGray);
+	}
+
+	.credits .note {
+		margin: 0;
+		color: var(--brandGray90);
+	}
+
+
+	.sofc-logo {
+		display: block;
+		width: 220px;
+		margin: 15px 24px 32px;
+	}
+
+	.sofc-logo img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	.sofc-logo:hover img {
+		opacity: 0.7;
+	}
+
+	.credits a {
+		color: inherit;
+		text-decoration: underline;
 	}
 
 	.end-buttons {

@@ -3,8 +3,9 @@ Build the data file for the tour page from the routed itineraries.
 
 Adds what the step cards need on top of the routed segments: boarding and
 alighting stop names (nearest GTFS stop served by that line), line names and
-colours, TTC and TPL links, and groups segments into scroll steps. Transfer walks
-under TRANSFER_FOLD_MIN are folded into the next ride's step.
+colours, TTC and TPL links, and groups segments into scroll steps. Walks under
+WALK_FOLD_MIN that lead to a ride (to the first stop, or a transfer) are folded
+into that ride's step.
 
 Inputs:  transit_routes_edited.geojson (02b_manual_fixes.R), tour_stops.csv, tpl_branch_info.csv
          (TPL Branch General Information, Toronto Open Data), r5/ttc_gtfs.zip
@@ -25,7 +26,9 @@ from shapely.geometry import Point
 HERE = Path(__file__).parent
 OUT = HERE / "tour_app.json"
 
-TRANSFER_FOLD_MIN = 2
+# Walks shorter than this that lead to a ride (from a library to the first stop,
+# or a transfer) are folded into that ride's step instead of getting their own.
+WALK_FOLD_MIN = 3
 STOP_SNAP_M = 80
 COORD_DECIMALS = 5
 CRS_M = 32617
@@ -105,7 +108,8 @@ def main():
             "n": int(s.stop),
             "name": clean_branch_name(t.BranchName),
             "address": s.address.replace(", Toronto, ON", "").split(", M")[0],
-            "url": t.Website,
+            # The Open Data file has a typo in one branch URL (tpl.ca.ca).
+            "url": t.Website.replace("tpl.ca.ca", "tpl.ca"),
             "lon": round(s.lon, COORD_DECIMALS),
             "lat": round(s.lat, COORD_DECIMALS),
         }
@@ -143,11 +147,12 @@ def main():
         steps = [{"kind": "library", "library": 1, "segs": [], "first": True}]
         for leg, legsegs in pd.Series(segments).groupby([s["leg"] for s in segments]):
             legsegs = list(legsegs)
-            pending_transfer = None
+            pending_walk = None
             for k, s in enumerate(legsegs):
                 is_transfer = (s["mode"] == "WALK" and 0 < k < len(legsegs) - 1)
-                if is_transfer and s["minutes"] < TRANSFER_FOLD_MIN:
-                    pending_transfer = s
+                leads_to_ride = (s["mode"] == "WALK" and k < len(legsegs) - 1)
+                if leads_to_ride and s["minutes"] < WALK_FOLD_MIN:
+                    pending_walk = (s, is_transfer)
                     continue
                 step = {"kind": "walk" if s["mode"] == "WALK" else "ride", "segs": [s["id"]]}
                 if step["kind"] == "walk":
@@ -155,10 +160,11 @@ def main():
                     step["to"] = (nxt["from_stop"] if nxt else None) or libs[(r, leg + 1)]["name"]
                     step["to_library"] = nxt is None
                     step["transfer"] = is_transfer
-                if pending_transfer:
-                    step["segs"].insert(0, pending_transfer["id"])
-                    step["transfer"] = True
-                    pending_transfer = None
+                if pending_walk:
+                    walk, was_transfer = pending_walk
+                    step["segs"].insert(0, walk["id"])
+                    step["transfer"] = was_transfer
+                    pending_walk = None
                 steps.append(step)
             steps.append({"kind": "library", "library": leg + 1, "segs": []})
 
