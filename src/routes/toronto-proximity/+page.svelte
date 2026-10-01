@@ -5,11 +5,17 @@
 
 	let showInfo = true;
 
-	const isTabletOrPhone =
-		typeof window !== 'undefined' &&
-		(window.innerWidth <= 1024 ||
-		 (window.innerWidth <= 1100 && window.innerHeight > window.innerWidth));
-	const zoomOffset = isTabletOrPhone ? 0.18 : 0.25;
+	const w = typeof window !== 'undefined' ? window.innerWidth : 1440;
+	const h = typeof window !== 'undefined' ? window.innerHeight : 900;
+	const isTabletOrPhone = w <= 1024 || (w <= 1100 && h > w);
+	const isPortrait = h > w;
+	const isShortLandscape = !isPortrait && h <= 500;   // phones held sideways
+
+	// Portrait screens are width-limited, so any extra zoom crops the east/west ends
+	// of the city; landscape screens have room to spare at the sides.
+	const zoomOffset = isPortrait || isShortLandscape ? 0 : (isTabletOrPhone ? 0.3 : 0.45);
+	// Shift the city down so it isn't hidden behind the legends along the top
+	const panOffset = isShortLandscape ? 30 : 60;
 </script>
 
 <PasswordGate />
@@ -21,7 +27,7 @@
 <svelte:window on:keydown={(e) => { if (e.key === 'Escape') showInfo = false; }} />
 
 <main class="swipe-page">
-	<SwipeMap {zoomOffset}/>
+	<SwipeMap {zoomOffset} {panOffset}/>
 
 	<button class="info-btn" aria-label="About this map" on:click={() => (showInfo = true)}>i</button>
 
@@ -35,7 +41,7 @@
 				<p class="subhead">How to use the map:</p>
 				<ul>
 					<li><b>Drag the slider</b> to compare the demographic data on the left with travel time to the nearest library on the right.</li>
-					<li>Use the <b>Variable</b> menu at the top to switch between population groups, and the <b>Weekday/Weekend</b> buttons to change the transit schedule.</li>
+					<li>Use the <b>Variable</b> menu at the top to switch between population groups, and the <b>Weekday/Weekend</b> buttons to change the transit schedule, or <b>Walking</b> to see travel times on foot only.</li>
 				</ul>
 				<p class="phone-note">If you are viewing this webpage from your phone, it is highly advised to explore the data in landscape, or on larger screens (tablets/laptops).</p>
 				<p>If you are interested to learn more about the research and findings, <a href="https://schoolofcities.github.io/posts/spatial-access-to-public-libraries-toronto/" target="_blank" rel="noopener">read the study</a>.</p>
@@ -46,26 +52,19 @@
 </main>
 
 <style>
+	/* Pinned to the visible screen so the page itself can never scroll: both legend
+	   corners stay in view even as mobile browser toolbars show/hide */
 	.swipe-page {
-		width: 100vw;
-		height: 100dvh;
+		position: fixed;
+		inset: 0;
 		overflow: hidden;
+		overscroll-behavior: none;
 	}
 
 	.swipe-page :global(.swipe-wrap) {
-		height: 100dvh;
+		height: 100%;
 	}
 
-	/* One font for the whole pop-up and button, matching the map labels */
-	/* ── Responsive tweaks for this full-screen page only ── */
-
-	/* The shared map hides the travel-time legend below 1024px (it was built
-	   for the shorter map on the story page). Full screen has room, so show it. */
-	.swipe-page :global(.right-legend) {
-		display: block;
-	}
-
-	/* Keep "17.3 min" on one line on smaller screens */
 	.swipe-page :global(.bar-val) {
 		width: auto;
 		white-space: nowrap;
@@ -75,7 +74,6 @@
 		font-family: 'OpenSans', sans-serif;
 	}
 
-	/* Open Sans bold is its own font file, so bold text uses it directly */
 	.info-btn, .info-card h2, .info-card .subhead, .info-card b, .info-card a {
 		font-family: 'OpenSansBold', sans-serif;
 		font-weight: normal;
@@ -111,9 +109,10 @@
 
 	.info-card {
 		position: relative;
+		box-sizing: border-box;   /* so max-height includes the padding and the card never exceeds the screen */
 		background: white;
 		max-width: 480px;
-		max-height: calc(100dvh - 32px);
+		max-height: 100%;         /* of the backdrop's padded area, i.e. the visible screen minus 16px each side */
 		overflow-y: auto;
 		padding: 24px 28px 20px;
 		border-radius: 8px;
@@ -128,9 +127,6 @@
 		font-size: 19px;
 	}
 
-	/* The site-wide stylesheet gives p and li their own font, size and
-	   spacing, which beat anything inherited from .info-card. Setting them
-	   directly here makes all body text in the pop-up identical. */
 	.info-card p, .info-card li {
 		font-family: 'OpenSans', sans-serif;
 		font-size: 14px;
@@ -179,70 +175,49 @@
 		cursor: pointer;
 	}
 	.ok-btn:hover { background: #3f4c6b; }
-	/* ── Bigger controls on tablets and phones ──────────────────────────
-	   The shared map shrinks its labels, legends and toggles below 1024px
-	   (to fit the short map on the story page). This full-screen page has
-	   room, so these rules size them back up. "main.swipe-page" makes each
-	   rule slightly more specific than the component's own, so these win. */
+	/* ── Bigger controls on tablets and phones*/
 
-	/* Tablets, small laptops and phones held sideways (601–1024px),
-	   plus large upright tablets up to 1100px (iPad Pro, Surface Pro) */
+	/* Tablets, small laptops and phones held sideways (601–1024px), plus large upright tablets up to 1100px (iPad Pro, Surface Pro) */
 	@media (max-width: 1024px), (max-width: 1100px) and (orientation: portrait) {
-		/* Variable menu sits top-left, with the demographic card below it */
-		main.swipe-page :global(.dropdown-wrap) {
-			top: 12px;
-			left: 52px;
-			transform: none;
-			font-size: 13px;
-			padding: 5px 10px;
-		}
+		/* Variable menu (inside the demographic legend) */
+		main.swipe-page :global(.dropdown-wrap) { font-size: 14px; }
 		main.swipe-page :global(.dropdown-wrap select) {
-			font-size: 14px;
+			font-size: 15px;
 			padding: 4px 6px;
 		}
-		main.swipe-page :global(.left-label) {
-			top: 60px;
-			left: 52px;
-			max-width: 300px;
-			padding: 8px 12px;
-		}
-		main.swipe-page :global(.label-text) { font-size: 14px; margin-bottom: 6px; }
-		main.swipe-page :global(.label-sub)  { font-size: 11px; }
-		main.swipe-page :global(.bar-label)  { font-size: 12px; width: 92px; }
+		main.swipe-page :global(.bar-label)  { font-size: 13px; width: 98px; }
 		main.swipe-page :global(.bar-track)  { width: 110px; height: 12px; }
-		main.swipe-page :global(.bar-val)    { font-size: 12px; }
-		main.swipe-page :global(.chart-note) { font-size: 10px; margin-top: 4px; }
+		main.swipe-page :global(.bar-val)    { font-size: 13px; }
+		main.swipe-page :global(.chart-note) { font-size: 11px; margin-top: 4px; }
 		main.swipe-page :global(.bar-row)    { margin-bottom: 4px; gap: 4px; }
 
-		/* Walking + Transit box and Weekday/Weekend toggle */
-		main.swipe-page :global(.right-label) {
-			right: 8px;
-			font-size: 15px;
-			padding: 8px 10px;
-			gap: 6px;
-		}
+		/* Travel-mode heading and Weekday/Weekend/Walking toggle (inside the travel-time legend) */
+		main.swipe-page :global(.mode-title) { font-size: 16px; }
+		main.swipe-page :global(.mode-control) { gap: 6px; }
 		main.swipe-page :global(.toggle button) {
-			font-size: 13px;
+			font-size: 14px;
 			padding: 7px 14px;
 		}
 
 		/* Legends */
 		main.swipe-page :global(.legend)          { padding: 10px 12px; }
-		main.swipe-page :global(.legend-name)     { font-size: 13px; margin-bottom: 4px; }
-		main.swipe-page :global(.legend-subtitle) { font-size: 12px; }
+		main.swipe-page :global(.legend-name)     { font-size: 14px; margin-bottom: 4px; }
+		main.swipe-page :global(.right-legend .legend-name) { font-size: 15px; }
+		main.swipe-page :global(.legend-subtitle) { font-size: 13px; }
 		main.swipe-page :global(.color-bar)       { width: 170px; height: 13px; }
-		main.swipe-page :global(.break-labels)    { width: 170px; font-size: 11px; }
-		main.swipe-page :global(.legend-item)     { font-size: 12px; }
+		main.swipe-page :global(.break-labels)    { width: 170px; font-size: 12px; }
+		main.swipe-page :global(.legend-item)     { font-size: 13px; }
 		main.swipe-page :global(.swatch)          { width: 12px; height: 12px; }
 		main.swipe-page :global(.swatch.line)     { height: 3px; }
-		main.swipe-page :global(.left-legend)     { bottom: 12px; left: 12px; }
+		/* Demographic legend across the top; travel-time legend at the bottom right */
+		main.swipe-page :global(.left-legend)     { top: 12px; left: 52px; max-width: calc(100% - 52px - 52px); }
+		main.swipe-page :global(.right-legend)    { top: auto; bottom: 40px; right: 12px; }
 
 		/* Bigger slider handle, easier to grab with a finger */
 		main.swipe-page :global(.divider-handle) { width: 40px; height: 40px; font-size: 20px; }
 
-		/* "i" button: bigger, and just below the Walking + Transit box */
+		/* "i" button: bigger, top right beside the demographic legend */
 		.info-btn {
-			top: 92px;
 			width: 36px;
 			height: 36px;
 			font-size: 18px;
@@ -253,8 +228,6 @@
 	   controls up so they take the same share of the screen as on an
 	   iPad mini. "zoom" enlarges an element and everything inside it. */
 	@media (min-width: 900px) and (max-width: 1100px) and (orientation: portrait) {
-		main.swipe-page :global(.dropdown-wrap),
-		main.swipe-page :global(.map-label),
 		main.swipe-page :global(.legend-slot),
 		main.swipe-page :global(.divider-handle),
 		.info-btn {
@@ -262,68 +235,99 @@
 		}
 	}
 
+	/* Large monitors (1800px+ wide): legends scale up so they stay readable */
+	@media (min-width: 1800px) and (min-height: 1000px) {
+		main.swipe-page :global(.legend-slot),
+		.info-btn {
+			zoom: 1.25;
+		}
+	}
+
+	/* Touch-only devices (tablets of any size, e.g. iPad Pro in landscape, which is wider
+	   than the tablet breakpoint): demographic legend across the top, travel-time legend
+	   at the bottom — same layout as smaller tablets and phones */
+	@media (hover: none) and (pointer: coarse) {
+		main.swipe-page :global(.left-legend)  { max-width: calc(100% - 52px - 52px); }
+		main.swipe-page :global(.right-legend) { top: auto; bottom: 40px; right: 12px; }
+	}
+
+	/* Phones held sideways (short landscape): too little height for the
+	   tablet-sized legends, so shrink them back down. The demographic legend
+	   fits on one row along the top; the travel-time legend moves to the
+	   bottom, over the lake, just left of the scale bar. */
+	@media (orientation: landscape) and (max-height: 500px) {
+		main.swipe-page :global(.legend)          { padding: 6px 8px; }
+		main.swipe-page :global(.legend-name)     { font-size: 11px; margin-bottom: 2px; }
+		main.swipe-page :global(.right-legend .legend-name) { font-size: 12px; }
+		main.swipe-page :global(.legend-subtitle) { font-size: 10px; margin: 1px 0 4px; }
+		main.swipe-page :global(.color-bar)       { width: 110px; height: 9px; }
+		main.swipe-page :global(.break-labels)    { width: 110px; font-size: 9px; }
+		main.swipe-page :global(.legend-item)     { font-size: 11px; }
+		main.swipe-page :global(.swatch)          { width: 9px; height: 9px; }
+
+		main.swipe-page :global(.dropdown-wrap)        { font-size: 12px; margin-bottom: 4px; }
+		main.swipe-page :global(.dropdown-wrap select) { font-size: 12px; padding: 2px 4px; }
+		main.swipe-page :global(.bar-label)  { font-size: 11px; width: 78px; }
+		main.swipe-page :global(.bar-track)  { width: 70px; height: 9px; }
+		main.swipe-page :global(.bar-val)    { font-size: 11px; }
+		main.swipe-page :global(.chart-note) { font-size: 9px; margin-top: 2px; }
+		main.swipe-page :global(.bar-row)    { margin-bottom: 2px; gap: 2px; }
+
+		main.swipe-page :global(.mode-title)    { font-size: 12px; }
+		main.swipe-page :global(.mode-control)  { gap: 3px; }
+		main.swipe-page :global(.toggle button) { font-size: 11px; padding: 4px 8px; }
+
+		main.swipe-page :global(.left-legend)  { top: 8px; left: 50px; max-width: calc(100% - 50px - 48px); }
+		main.swipe-page :global(.right-legend) { top: auto; bottom: 8px; right: 115px; }
+
+		main.swipe-page :global(.divider-handle) { width: 32px; height: 32px; font-size: 16px; }
+
+		.info-btn { top: 8px; width: 30px; height: 30px; font-size: 15px; }
+	}
+
 	/* Phones held upright (≤600px): compact, uncluttered */
 	@media (max-width: 600px) {
-		main.swipe-page :global(.dropdown-wrap) {
-			left: 8px;
-			top: 8px;
-			padding: 4px 6px;
-		}
 		main.swipe-page :global(.dropdown-wrap select) {
-			font-size: 12px;
+			font-size: 13px;
 			padding: 3px 4px;
 			max-width: 140px;
 		}
-		main.swipe-page :global(.right-label) {
-			right: 6px;
-			top: 8px;
-			font-size: 11px;
-			padding: 5px 7px;
-			gap: 4px;
-		}
+		main.swipe-page :global(.mode-title) { font-size: 12px; }
+		main.swipe-page :global(.mode-control) { gap: 4px; }
 		main.swipe-page :global(.toggle button) {
-			font-size: 11px;
+			font-size: 12px;
 			padding: 5px 8px;
 		}
 
-		/* Demographic card: bars and minutes only */
-		main.swipe-page :global(.left-label) {
-			display: block;
-			top: 72px;
-			left: 8px;
-			max-width: 200px;
-			padding: 5px 8px;
-		}
-		main.swipe-page :global(.label-sub)  { display: none; }
-		main.swipe-page :global(.label-text) { font-size: 11px; margin-bottom: 3px; }
-		main.swipe-page :global(.bar-label)  { font-size: 10px; width: 70px; }
+		/* Bar chart inside the demographic legend */
+		main.swipe-page :global(.bar-label)  { font-size: 11px; width: 76px; }
 		main.swipe-page :global(.bar-track)  { width: 60px; height: 8px; }
-		main.swipe-page :global(.bar-val)    { font-size: 10px; }
-		main.swipe-page :global(.chart-note) { font-size: 8px; margin-top: 2px; }
+		main.swipe-page :global(.bar-val)    { font-size: 11px; }
+		main.swipe-page :global(.chart-note) { font-size: 9px; margin-top: 2px; }
 		main.swipe-page :global(.bar-row)    { margin-bottom: 2px; gap: 3px; }
 
-		/* Legends: smaller; the Library / Transit key appears once,
-		   stacked, in the travel-time legend */
+		/* Legends: smaller; the Library / Transit key appears once, in the demographic legend */
 		main.swipe-page :global(.legend)          { padding: 6px 8px; }
-		main.swipe-page :global(.legend-name)     { font-size: 11px; margin-bottom: 2px; }
-		main.swipe-page :global(.legend-subtitle) { font-size: 10px; margin: 1px 0 4px; }
+		main.swipe-page :global(.legend-name)     { font-size: 12px; margin-bottom: 2px; }
+		main.swipe-page :global(.right-legend .legend-name) { font-size: 13px; }
+		main.swipe-page :global(.legend-subtitle) { font-size: 11px; margin: 1px 0 4px; }
 		main.swipe-page :global(.color-bar)       { width: 110px; height: 9px; }
-		main.swipe-page :global(.break-labels)    { width: 110px; font-size: 9px; margin-bottom: 4px; }
-		main.swipe-page :global(.legend-item)     { font-size: 10px; }
+		main.swipe-page :global(.break-labels)    { width: 110px; font-size: 10px; margin-bottom: 4px; }
+		main.swipe-page :global(.legend-item)     { font-size: 11px; }
 		main.swipe-page :global(.swatch)          { width: 9px; height: 9px; }
-		main.swipe-page :global(.left-legend .legend-extras) { display: none; }
 		main.swipe-page :global(.legend-extras) {
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 2px;
 		}
-		main.swipe-page :global(.left-legend)  { bottom: 10px; left: 8px; }
-		main.swipe-page :global(.right-legend) { bottom: 32px; right: 8px; }
+		/* Demographic legend top left; travel-time legend moves to the bottom right */
+		main.swipe-page :global(.left-legend)  { top: 8px; left: 8px; max-width: calc(100% - 16px - 38px); }
+		main.swipe-page :global(.right-legend) { top: auto; bottom: 52px; right: 8px; max-width: calc(100% - 16px); }
 
 		main.swipe-page :global(.divider-handle) { width: 32px; height: 32px; font-size: 16px; }
 
 		.info-btn {
-			top: 72px;
+			top: 8px;
 			right: 8px;
 			width: 30px;
 			height: 30px;
@@ -342,8 +346,22 @@
 			border-radius: 4px;
 		}
 	}
-	/* Phones held sideways: hide the "% of population per census tract" line */
-	@media (orientation: landscape) and (max-height: 500px) {
-		main.swipe-page :global(.label-sub) { display: none; }
+
+	/* Short screens (phones held sideways): wider card, tighter text, so the whole
+	   About box fits on screen without scrolling */
+	@media (max-height: 500px) {
+		.backdrop { padding: 10px; }
+		.info-card {
+			max-width: 720px;
+			padding: 14px 22px 14px;
+			font-size: 13px;
+			line-height: 1.4;
+		}
+		.info-card h2 { font-size: 16px; margin-bottom: 6px; }
+		.info-card p, .info-card li { font-size: 13px; line-height: 1.4; }
+		.info-card p { margin-bottom: 8px; }
+		.info-card ul { margin-bottom: 8px; }
+		.info-card li { margin-bottom: 2px; }
+		.ok-btn { padding: 5px 12px; font-size: 12px; }
 	}
 </style>
