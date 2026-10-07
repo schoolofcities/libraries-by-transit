@@ -16,7 +16,7 @@ export const CITY_AVG = {
 export const DEMOGRAPHICS = [
 	{
 		id: 'visible_minority_pct',
-		label: 'Visible Minority',
+		label: 'Visible minority',
 		colors: ['#F0E9F1', '#C4A7C9', '#9865A1', '#6D247A'],
 		breaks: [31.4, 52.1, 74.4],
 		transit: 17.3,
@@ -24,7 +24,7 @@ export const DEMOGRAPHICS = [
 	},
 	{
 		id: 'low_income_pct',
-		label: 'Low Income',
+		label: 'Low income',
 		colors: ['#E5F2F5', '#99CBDA', '#4CA5BE', '#007FA3'],
 		breaks: [28.0, 34.1, 37.8],
 		transit: 16.9,
@@ -32,7 +32,7 @@ export const DEMOGRAPHICS = [
 	},
 	{
 		id: 'first_gen_immigrants_pct',
-		label: 'First Gen. Immigrants',
+		label: 'First gen. immigrants',
 		colors: ['#E5F5F3', '#99D9CF', '#4CBDAC', '#00A189'],
 		breaks: [37.6, 52.9, 63.3],
 		transit: 17.2,
@@ -61,7 +61,7 @@ export const DEMOGRAPHICS = [
 // it doesn't have to be filtered out of DEMOGRAPHICS everywhere it's used.
 export const POP_DENSITY = {
 	id: 'pop_density',
-	label: 'Population Density',
+	label: 'Population density',
 	colors: ['#FBECEA', '#F1B5AD', '#E67D70', '#DC4633'],
 	breaks: [3411, 5722, 9245],
 	suffix: 'ppl/km²',
@@ -82,5 +82,5 @@ export const VARIABLES_BY_ID = Object.fromEntries(
 // the shape DotPlot.svelte renders directly.
 export const DOTPLOT_DATA = [
 	...DEMOGRAPHICS.map(({ label, transit, walk }) => ({ label, transit, walk })),
-	{ label: 'Total Population', transit: CITY_AVG.transit, walk: CITY_AVG.walk },
+	{ label: 'Total population', transit: CITY_AVG.transit, walk: CITY_AVG.walk },
 ];

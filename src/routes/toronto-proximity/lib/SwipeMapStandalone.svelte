@@ -127,11 +127,10 @@
 	const timeLabels = {
 		weekday: 'Tuesday, 10:00-10:30am',
 		weekend: 'Saturday, 10:00-10:30am',
-		walk:    'No transit, any time',
+		walk:    'Walking only',
 	};
 
 	$: timeLabel = timeLabels[timeOfWeek];
-	$: modeTitle = timeOfWeek === 'walk' ? 'Walking only' : 'Walking + Transit';
 
 	function setTimeOfWeek(val) {
 		timeOfWeek = val;
@@ -375,7 +374,7 @@
 			breakLabels={activeDemog.breaks.map(b => `${b}%`)}
 		>
 			<div slot="header" class="dropdown-wrap">
-				<label for="demog-select">Variable:</label>
+				<label for="demog-select">Demographic variable:</label>
 				<select id="demog-select" on:change={(e) => setDemographic(demographics.find(d => d.id === e.target.value))}>
 					{#each demographics as d}
 						<option value={d.id}>{d.label}</option>
@@ -385,8 +384,9 @@
 
 			<!-- Bar chart — hidden on mobile -->
 			<div class="bar-rows">
+				<div class="bar-title">Average travel time to nearest library</div>
 				<div class="bar-row">
-					<span class="bar-label">Walk + Transit</span>
+					<span class="bar-label">Walk + transit</span>
 					<div class="bar-track">
 						<div class="bar" style="width:{transitBarW}%; background:{barColor};"></div>
 					</div>
@@ -399,7 +399,7 @@
 					</div>
 					<span class="bar-val">{activeDemog.walk} min</span>
 				</div>
-				<div class="chart-note">City avg — Transit: {CITY_AVG.transit} min · Walk: {CITY_AVG.walk} min</div>
+				<div class="chart-note">City avg — transit: {CITY_AVG.transit} min · walk: {CITY_AVG.walk} min</div>
 			</div>
 		</Legend>
 	</div>
@@ -410,17 +410,17 @@
 		<Legend
 			horizontal
 			showExtras={false}
-			title="Minutes to Library"
+			leadLast
+			title="Travel time to nearest library"
 			subtitle={timeLabel}
 			colors={['#516082', '#5FA5C1', '#A2D7F2']}
 			breakLabels={['15 min', '30 min']}
 		>
 			<div slot="lead" class="mode-control">
-				<div class="mode-title">{modeTitle}</div>
 				<div class="toggle">
-					<button class:active={timeOfWeek === 'weekday'} on:click={() => setTimeOfWeek('weekday')}>Weekday</button>
-					<button class:active={timeOfWeek === 'weekend'} on:click={() => setTimeOfWeek('weekend')}>Weekend</button>
-					<button class:active={timeOfWeek === 'walk'}    on:click={() => setTimeOfWeek('walk')}>Walking</button>
+					<button class:active={timeOfWeek === 'weekday'} on:click={() => setTimeOfWeek('weekday')}>Transit<br />weekday</button>
+					<button class:active={timeOfWeek === 'weekend'} on:click={() => setTimeOfWeek('weekend')}>Transit<br />weekend</button>
+					<button class:active={timeOfWeek === 'walk'}    on:click={() => setTimeOfWeek('walk')}>Walking<br />only</button>
 				</div>
 			</div>
 		</Legend>
@@ -487,11 +487,6 @@
 		pointer-events: auto;   /* Legend box itself is pointer-events: none */
 	}
 
-	.mode-title {
-		font-family: 'TradeGothicBold', sans-serif;
-		font-size: 14px;
-	}
-
 	.toggle {
 		display: flex;
 		gap: 3px;
@@ -509,6 +504,8 @@
 		font-size: 12px;
 		cursor: pointer;
 		color: #333;
+		line-height: 1.2;
+		text-align: center;
 		transition: background 0.15s;
 	}
 
@@ -518,12 +515,16 @@
 	/* ── Dropdown (inside left legend)  */
 	.dropdown-wrap {
 		display: flex;
-		align-items: center;
-		gap: 5px;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 2px;
 		margin-bottom: 8px;
 		font-size: 13px;
 		pointer-events: auto;   /* Legend box itself is pointer-events: none */
 	}
+
+	/* 1px smaller than the wrapper's size, whatever the breakpoint */
+	.dropdown-wrap label { font-size: calc(1em - 1px); }
 
 	.dropdown-wrap select {
 		border: 1px solid #ccc;
@@ -577,6 +578,12 @@
 		padding-left: 4px;
 	}
 
+	.bar-title {
+		font-family: 'TradeGothicBold', sans-serif;
+		font-size: 12px;
+		margin-bottom: 4px;
+	}
+
 	.chart-note {
 		font-size: 10px;
 		color: #999;
@@ -593,7 +600,7 @@
 	.left-legend  { top: 12px; left: 52px;  max-width: calc(100% - 52px - 440px); }
 	.right-legend { top: 12px; right: 44px; }
 
-	/* "Minutes to Library" title — 1px larger than the legend's default title size */
+	/* "Travel time to nearest library" title — 1px larger than the legend's default title size */
 	.right-legend :global(.legend .legend-name) { font-size: 13px; }
 
 	/* ── Tablet (≤1024px) — compact legends ── */
@@ -605,10 +612,10 @@
 		.bar-track  { width: 70px; height: 9px; }
 		.bar-val    { font-size: 10px; width: 40px; }
 		.chart-note { font-size: 9px; margin-top: 2px; }
+		.bar-title  { font-size: 10px; margin-bottom: 2px; }
 		.bar-row    { margin-bottom: 2px; gap: 2px; }
 
 		/* Travel-mode heading + toggle */
-		.mode-title { font-size: 11px; }
 		.right-legend :global(.legend .legend-name) { font-size: 11px; }
 		.toggle button { padding: 2px 6px; font-size: 10px; }
 

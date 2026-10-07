@@ -1,6 +1,5 @@
 <script>
 	import '../../assets/global-styles.css';
-	import PasswordGate from '$lib/PasswordGate.svelte';
 	import SwipeMap from './lib/SwipeMapStandalone.svelte';
 
 	let showInfo = true;
@@ -18,10 +17,16 @@
 	const panOffset = isShortLandscape ? 30 : 60;
 </script>
 
-<PasswordGate />
-
 <svelte:head>
-	<title>Library access swipe map | School of Cities</title>
+	<title>Spatial access to public libraries | School of Cities</title>
+	<meta name="description" content="Interactive map comparing neighbourhood demographics with walking and transit travel times to the nearest public library in Toronto." />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="Spatial access to public libraries" />
+	<meta property="og:description" content="Interactive map comparing neighbourhood demographics with walking and transit travel times to the nearest public library in Toronto." />
+	<meta property="og:image" content="https://schoolofcities.github.io/libraries-by-transit/toronto-proximity-card.png" />
+	<meta property="og:image:width" content="1419" />
+	<meta property="og:image:height" content="787" />
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <svelte:window on:keydown={(e) => { if (e.key === 'Escape') showInfo = false; }} />
@@ -37,14 +42,18 @@
 			<div class="info-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
 				<button class="close-btn" aria-label="Close" on:click={() => (showInfo = false)}>&times;</button>
 				<h2 id="info-title">About this map</h2>
-				<p>This map is part of a School of Cities research project on mapping public transit and pedestrian accessibility to public libraries in Toronto. This interactive map allows to explore the overlay of census-tract aggregated demographic data with the walking+transit isochrones.</p>
+				<p>This map was created by Polina Gorn as part of a <a href="https://www.schoolofcities.utoronto.ca/" target="_blank" rel="noopener">School of Cities</a> research project on mapping public transit and pedestrian accessibility to public libraries in Toronto. This interactive map allows to explore the overlay of census-tract aggregated demographic data with the walking+transit isochrones.</p>
 				<p class="subhead">How to use the map:</p>
 				<ul>
 					<li><b>Drag the slider</b> to compare the demographic data on the left with travel time to the nearest library on the right.</li>
 					<li>Use the <b>Variable</b> menu at the top to switch between population groups, and the <b>Weekday/Weekend</b> buttons to change the transit schedule, or <b>Walking</b> to see travel times on foot only.</li>
 				</ul>
 				<p class="phone-note">If you are viewing this webpage from your phone, it is highly advised to explore the data in landscape, or on larger screens (tablets/laptops).</p>
-				<p>If you are interested to learn more about the research and findings, <a href="https://schoolofcities.github.io/posts/spatial-access-to-public-libraries-toronto/" target="_blank" rel="noopener">read the study</a>.</p>
+				<p class="subhead">Learn more:</p>
+				<ul>
+					<li><a href="https://schoolofcities.github.io/posts/spatial-access-to-public-libraries-toronto/" target="_blank" rel="noopener">Read the study</a></li>
+					<li><a href="https://github.com/schoolofcities/libraries-by-transit" target="_blank" rel="noopener">View the code and data on GitHub</a></li>
+				</ul>
 				<button class="ok-btn" on:click={() => (showInfo = false)}>Explore the map</button>
 			</div>
 		</div>

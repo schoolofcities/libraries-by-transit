@@ -1,6 +1,6 @@
 <script>
 
-	// title: e.g. "Minutes to Library" or a demographic label
+	// title: e.g. "Travel time to nearest library" or a demographic label
 	// subtitle: optional, e.g. the active weekday/weekend time window
 	// colors: the color-bar segments, left to right
 	// breakLabels: labels for the dividers between segments
@@ -11,8 +11,10 @@
 	export let breakLabels = [];
 	// horizontal: lay the sections out side by side instead of stacked
 	export let horizontal = false;
-	// showExtras: show the Library / Major Transit Lines key
+	// showExtras: show the Library / Major transit lines key
 	export let showExtras = true;
+	// leadLast: render the "lead" slot after everything else instead of before
+	export let leadLast = false;
 	// slots: "lead" renders as its own section before everything else (e.g. a toggle),
 	//   "header" renders above the title (e.g. the variable dropdown),
 	//   the default slot renders between the color bar and the library/transit items
@@ -22,7 +24,7 @@
 
 
 <div class="legend" class:horizontal>
-	{#if $$slots.lead}
+	{#if $$slots.lead && !leadLast}
 		<div class="legend-section">
 			<slot name="lead" />
 		</div>
@@ -59,8 +61,13 @@
 			</div>
 			<div class="legend-item">
 				<div class="swatch line"></div>
-				<span>Major Transit Lines</span>
+				<span>Major transit lines</span>
 			</div>
+		</div>
+	{/if}
+	{#if $$slots.lead && leadLast}
+		<div class="legend-section">
+			<slot name="lead" />
 		</div>
 	{/if}
 </div>

@@ -9,6 +9,8 @@
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import mapStyle from './map-style.json';
+	import railUrl from '../data/rail_main.geojson?url';
+	import torontoBoundaryUrl from '../data/toronto_boundary.geojson?url';
 	import { WALK_COLOR, BOOK_ICON, MODE_ICONS, modeIcon, allToursBbox, buildStepPaths, along, lerp } from './tour.js';
 
 	let {
@@ -231,6 +233,8 @@
 			container.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
 			if (!tour) m.jumpTo({ ...fitRotated(allTourPoints(), 30), bearing: BEARING });
 			const ov = overviewData();
+			m.addSource('rail', { type: 'geojson', data: railUrl });
+			m.addSource('boundary', { type: 'geojson', data: torontoBoundaryUrl });
 			m.addSource('overview-routes', { type: 'geojson', data: ov.routes });
 			m.addSource('overview-libraries', { type: 'geojson', data: ov.libraries });
 			m.addSource('base', { type: 'geojson', data: EMPTY });
@@ -239,6 +243,26 @@
 			m.addSource('stops', { type: 'geojson', data: EMPTY });
 			m.addSource('dot', { type: 'geojson', data: EMPTY });
 
+			// Main-line and branch rail only (no yards or sidings), from a local OSM extract
+			m.addLayer({
+				id: 'rail',
+				type: 'line',
+				source: 'rail',
+				layout: { 'line-cap': 'butt', 'line-join': 'round' },
+				paint: {
+					'line-color': '#d0d0cc',
+					'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.5, 14, 1],
+					'line-dasharray': [6, 3]
+				}
+			}, 'buildings'); // keep it under buildings and labels, where the old rail layer was
+			// City of Toronto outline, under everything else
+			m.addLayer({
+				id: 'boundary',
+				type: 'line',
+				source: 'boundary',
+				layout: { 'line-join': 'round' },
+				paint: { 'line-color': '#6b6b6b', 'line-width': 1, 'line-dasharray': [2, 2] }
+			});
 			m.addLayer({
 				id: 'overview-routes-casing',
 				type: 'line',

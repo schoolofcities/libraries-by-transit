@@ -7,7 +7,6 @@
 	import { onMount, tick } from 'svelte';
 	import { replaceState } from '$app/navigation';
 	import '../../assets/global-styles.css';
-	import PasswordGate from '$lib/PasswordGate.svelte';
 	import sofcLogo from '../../assets/sofc-uoft-logo-black.svg';
 	import TourMap from './lib/TourMap.svelte';
 	import { WALK_COLOR, BOOK_ICON, modeLabel, minutes, distance, segmentsById } from './lib/tour.js';
@@ -256,11 +255,19 @@
 	}
 </script>
 
-<PasswordGate />
 
 <svelte:head>
-	<title>Toronto Public Library tours by transit | School of Cities</title>
-	<meta name="description" content="Ten tours of Toronto Public Library branches by TTC and on foot." />
+	<title>Visit every Toronto library by transit | School of Cities</title>
+	<meta name="description" content="Ten animated, interactive tours of Toronto Public Library branches. Follow each route by TTC and on foot, branch by branch." />
+	<!-- Web card shown when the page is shared. Social sites need absolute URLs; the image
+	     lives in static/ and is copied to the site root on build. -->
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="Visit every Toronto library by transit" />
+	<meta property="og:description" content="Ten animated, interactive tours of Toronto Public Library branches. Follow each route by TTC and on foot, branch by branch." />
+	<meta property="og:image" content="https://schoolofcities.github.io/libraries-by-transit/toronto-tour-card.png" />
+	<meta property="og:image:width" content="1312" />
+	<meta property="og:image:height" content="706" />
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <!-- A step card's contents, shared by the desktop scroll list and the phone stepper. -->
@@ -366,12 +373,12 @@
 			<div class="credits">
 				<p class="note">
 					Itineraries planned by Lanrick Bennett Jr.
-					Map by Jeff Allen. Read more at the
+					Map built by Jeff Allen. Read more at the
 					<a href="https://schoolofcities.utoronto.ca/" target="_blank" rel="noopener">School of Cities</a>.
 					Routes are based on TTC schedules and library information from September 2026. Branches can
 					close temporarily and services can change, so check
-					<a href="https://www.tpl.ca/" target="_blank" rel="noopener">tpl.ca</a> and
-					<a href="https://www.ttc.ca/" target="_blank" rel="noopener">ttc.ca</a> before you go.
+					Toronto Public Library (<a href="https://www.tpl.ca/" target="_blank" rel="noopener">tpl.ca</a>) and
+					Toronto Transit Commission (<a href="https://www.ttc.ca/" target="_blank" rel="noopener">ttc.ca</a>) before you go.
 				</p>
 			</div>
 			<ul class="tour-list">
@@ -930,6 +937,10 @@
 	.credits a {
 		color: inherit;
 		text-decoration: underline;
+	}
+
+	.credits a:hover {
+		opacity: 0.8;
 	}
 
 	.end-buttons {
